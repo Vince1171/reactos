@@ -153,11 +153,11 @@ ARC_STATUS ArcOpen(CHAR* Path, OPENMODE OpenMode, ULONG* FileId)
                     FileData[DeviceId].FileFuncTable = FatMount(DeviceId);
                 if (!FileData[DeviceId].FileFuncTable)
                     FileData[DeviceId].FileFuncTable = BtrFsMount(DeviceId);
+                if (!FileData[DeviceId].FileFuncTable)
+                    FileData[DeviceId].FileFuncTable = Ext2Mount(DeviceId);
 #ifndef _M_ARM
                 if (!FileData[DeviceId].FileFuncTable)
                     FileData[DeviceId].FileFuncTable = NtfsMount(DeviceId);
-                if (!FileData[DeviceId].FileFuncTable)
-                    FileData[DeviceId].FileFuncTable = Ext2Mount(DeviceId);
 #endif
 #if defined(_M_IX86) || defined(_M_AMD64)
 #ifndef UEFIBOOT
