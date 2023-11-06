@@ -28,10 +28,6 @@ Ext2AcquireForLazyWrite (
     IN PVOID    Context,
     IN BOOLEAN  Wait)
 {
-    //
-    // On a readonly filesystem this function still has to exist but it
-    // doesn't need to do anything.
-
     PEXT2_FCB    Fcb;
 
     Fcb = (PEXT2_FCB) Context;
@@ -62,9 +58,6 @@ VOID
 #endif
 Ext2ReleaseFromLazyWrite (IN PVOID Context)
 {
-    //
-    // On a readonly filesystem this function still has to exist but it
-    // doesn't need to do anything.
     PEXT2_FCB Fcb = (PEXT2_FCB) Context;
 
     ASSERT(Fcb != NULL);

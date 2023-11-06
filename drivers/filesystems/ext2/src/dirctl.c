@@ -1144,44 +1144,6 @@ Ext2NotifyChangeDirectory (
 
         Status = STATUS_PENDING;
 
-        /*
-            Currently the driver is read-only but here is an example on how to use the
-            FsRtl-functions to report a change:
-
-            ANSI_STRING TestString;
-            USHORT      FileNamePartLength;
-
-            RtlInitAnsiString(&TestString, "\\ntifs.h");
-
-            FileNamePartLength = 7;
-
-            FsRtlNotifyReportChange(
-                Vcb->NotifySync,            // PNOTIFY_SYNC NotifySync
-                &Vcb->NotifyList,           // PLIST_ENTRY  NotifyList
-                &TestString,                // PSTRING      FullTargetName
-                &FileNamePartLength,        // PUSHORT      FileNamePartLength
-                FILE_NOTIFY_CHANGE_NAME     // ULONG        FilterMatch
-                );
-
-            or
-
-            ANSI_STRING TestString;
-
-            RtlInitAnsiString(&TestString, "\\ntifs.h");
-
-            FsRtlNotifyFullReportChange(
-                Vcb->NotifySync,            // PNOTIFY_SYNC NotifySync
-                &Vcb->NotifyList,           // PLIST_ENTRY  NotifyList
-                &TestString,                // PSTRING      FullTargetName
-                1,                          // USHORT       TargetNameOffset
-                NULL,                       // PSTRING      StreamName OPTIONAL
-                NULL,                       // PSTRING      NormalizedParentName OPTIONAL
-                FILE_NOTIFY_CHANGE_NAME,    // ULONG        FilterMatch
-                0,                          // ULONG        Action
-                NULL                        // PVOID        TargetContext
-                );
-        */
-
     } _SEH2_FINALLY {
 
         if (bFcbAcquired) {
@@ -1227,8 +1189,6 @@ Ext2NotifyReportChange (
                                  (ULONG) Filter,
                                  (ULONG) Action,
                                  (PVOID) NULL );
-
-    // ASSERT(KeGetCurrentIrql() < DISPATCH_LEVEL);
 }
 
 

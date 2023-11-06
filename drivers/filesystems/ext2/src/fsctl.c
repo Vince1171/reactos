@@ -2226,6 +2226,10 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                 }
             }
 
+            if (!ext4_superblock_csum_verify(&Vcb->sb, Ext2Sb)) {
+                DEBUG(DL_ERR, ( "Found ext4 filesystem with invalid superblock checksum. Run e2fsck?\n"));
+            }
+
             SetLongFlag(Vcb->Flags, VCB_MOUNTED);
             SetFlag(Vcb->Vpb->Flags, VPB_MOUNTED);
             Ext2InsertVcb(Vcb);

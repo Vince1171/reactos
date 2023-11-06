@@ -644,8 +644,14 @@ NTSTATUS Ext2AddDotEntries(struct ext2_icb *icb, struct inode *dir,
 {
     struct ext3_dir_entry_2 * de;
     struct buffer_head * bh;
+    struct ext4_dir_entry_tail *t;
     ext3_lblk_t block = 0;
+    unsigned int blocksize = dir->i_sb->s_blocksize;
+    int csum_size = 0;
     int rc = 0;
+
+    if (ext4_has_metadata_csum(dir->i_sb))
+        csum_size = sizeof(struct ext4_dir_entry_tail);
 
     bh = ext3_append(icb, inode, &block, &rc);
     if (!bh) {
@@ -661,11 +667,16 @@ NTSTATUS Ext2AddDotEntries(struct ext2_icb *icb, struct inode *dir,
     de = (struct ext3_dir_entry_2 *)
          ((char *) de + le16_to_cpu(de->rec_len));
     de->inode = cpu_to_le32(dir->i_ino);
-    de->rec_len = cpu_to_le16(inode->i_sb->s_blocksize-EXT3_DIR_REC_LEN(1));
+    de->rec_len = cpu_to_le16(inode->i_sb->s_blocksize-EXT3_DIR_REC_LEN(1)-csum_size);
     de->name_len = 2;
     strcpy (de->name, "..");
     ext3_set_de_type(inode->i_sb, de, S_IFDIR);
     inode->i_nlink = 2;
+    if (csum_size) {
+        t = EXT4_DIRENT_TAIL(bh->b_data, blocksize);
+        initialize_dirent_tail(t, blocksize);
+    }
+    ext4_dirent_csum_set(inode, (struct ext4_dir_entry *)bh->b_data);
     set_buffer_dirty(bh);
     ext3_mark_inode_dirty(icb, inode);
 

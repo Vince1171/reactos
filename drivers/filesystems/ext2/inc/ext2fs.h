@@ -22,9 +22,6 @@ typedef IO_STACK_LOCATION EXTENDED_IO_STACK_LOCATION, *PEXTENDED_IO_STACK_LOCATI
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#include <linux/ext2_fs.h>
-#include <linux/ext3_fs.h>
-#include <linux/ext3_fs_i.h>
 #include <linux/ext4.h>
 
 /* DEBUG ****************************************************************/
@@ -34,21 +31,19 @@ typedef IO_STACK_LOCATION EXTENDED_IO_STACK_LOCATION, *PEXTENDED_IO_STACK_LOCATI
 # define EXT2_DEBUG   0
 #endif
 
-#define EXT_DEBUG_BREAKPOINT FALSE
-
-#if EXT2_DEBUG && EXT_DEBUG_BREAKPOINT
-//#if _X86_
-//#define DbgBreak()      __asm int 3
-//#else
+#if EXT2_DEBUG
+#if _X86_
+#define DbgBreak()      __asm int 3
+#else
 #define DbgBreak()      KdBreakPoint()
-//#endif
+#endif
 #else
 #define DbgBreak()
 #endif
 
 /* STRUCTS & CONSTS******************************************************/
 
-#define EXT2FSD_VERSION                 "0.69"
+#define EXT2FSD_VERSION                 "0.70"
 
 
 /* WDK DEFINITIONS ******************************************************/
@@ -301,6 +296,7 @@ Ext2ClearFlag(PULONG Flags, ULONG FlagBit)
 #define EXT2_DIRSP_MAGIC        'SD2E'
 #define EXT2_SB_MAGIC           'BS2E'
 #define EXT2_GD_MAGIC           'DG2E'
+#define EXT2_INODE_MAGIC        'EI2E'
 #define EXT2_FLIST_MAGIC        'LF2E'
 #define EXT2_PARAM_MAGIC        'PP2E'
 #define EXT2_RWC_MAGIC          'WR2E'
@@ -2094,12 +2090,6 @@ int ext3_check_dir_entry (const char * function, struct inode * dir,
 loff_t ext3_max_size(int blkbits, int has_huge_files);
 loff_t ext3_max_bitmap_size(int bits, int has_huge_files);
 
-
-__le16 ext4_group_desc_csum(struct ext3_sb_info *sbi, __u32 block_group,
-                            struct ext4_group_desc *gdp);
-int ext4_group_desc_csum_verify(struct ext3_sb_info *sbi, __u32 block_group,
-                                struct ext4_group_desc *gdp);
-
 ext3_fsblk_t descriptor_loc(struct super_block *sb,
                             ext3_fsblk_t logical_sb_block, unsigned int nr);
 struct ext4_group_desc * ext4_get_group_desc(struct super_block *sb,
@@ -2683,6 +2673,11 @@ Ext2TruncateIndirect(
 //
 // linux.c: linux lib implemenation
 //
+
+#if _MSC_VER > 1900
+int strncmp(const char* str1, const char* str2, size_t count);
+char* strncpy(char* dest, const char* src, size_t count);
+#endif
 
 int
 ext2_init_linux();

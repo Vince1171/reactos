@@ -2076,15 +2076,9 @@ Ext2ParseRegistryVolumeParams(
 
     USHORT i, j, k;
 
-#ifdef __REACTOS__
     RtlZeroMemory(Codepage, sizeof(WCHAR) * CODEPAGE_MAXLEN);
     RtlZeroMemory(Prefix, sizeof(WCHAR) * HIDINGPAT_LEN);
     RtlZeroMemory(Suffix, sizeof(WCHAR) * HIDINGPAT_LEN);
-#else
-    RtlZeroMemory(Codepage, CODEPAGE_MAXLEN);
-    RtlZeroMemory(Prefix, HIDINGPAT_LEN);
-    RtlZeroMemory(Suffix, HIDINGPAT_LEN);
-#endif
     RtlZeroMemory(MountPoint, sizeof(USHORT) * 4);
     RtlZeroMemory(DrvLetter, sizeof(CHAR) * 4);
 
@@ -2574,6 +2568,14 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         Vcb->sbi.s_blocks_per_group = sb->s_blocks_per_group;
         Vcb->sbi.s_first_ino = sb->s_first_ino;
         Vcb->sbi.s_desc_size = sb->s_desc_size;
+        Vcb->sbi.s_clusters_per_group = sb->s_clusters_per_group;
+        Vcb->sbi.s_inode_size = sb->s_inode_size;
+
+        /* Precompute checksum seed for all metadata */
+        if (ext4_has_feature_csum_seed(&Vcb->sb))
+            Vcb->sbi.s_csum_seed = sb->s_checksum_seed;
+        else if (ext4_has_metadata_csum(&Vcb->sb) || ext4_has_feature_ea_inode(&Vcb->sb))
+            Vcb->sbi.s_csum_seed = ext4_chksum(&Vcb->sbi, ~0, sb->s_uuid, sizeof(sb->s_uuid));
 
         if (EXT3_HAS_INCOMPAT_FEATURE(&Vcb->sb, EXT4_FEATURE_INCOMPAT_64BIT)) {
             if (Vcb->sbi.s_desc_size < EXT4_MIN_DESC_SIZE_64BIT ||

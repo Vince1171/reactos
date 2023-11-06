@@ -36,7 +36,7 @@ Ext2LoadSuper(IN PEXT2_VCB      Vcb,
     Ext2Sb = (PEXT2_SUPER_BLOCK)
              Ext2AllocatePool(
                  PagedPool,
-                 SUPER_BLOCK_SIZE,
+                 sizeof(EXT2_SUPER_BLOCK),
                  EXT2_SB_MAGIC
              );
     if (!Ext2Sb) {
@@ -47,7 +47,7 @@ Ext2LoadSuper(IN PEXT2_VCB      Vcb,
     Status = Ext2ReadDisk(
                  Vcb,
                  (ULONGLONG) SUPER_BLOCK_OFFSET,
-                 SUPER_BLOCK_SIZE,
+                 sizeof(EXT2_SUPER_BLOCK),
                  (PVOID) Ext2Sb,
                  bVerify );
 
@@ -72,11 +72,12 @@ Ext2SaveSuper(
     LONGLONG    offset;
     BOOLEAN     rc;
 
+    ext4_superblock_csum_set(&Vcb->sb);
     offset = (LONGLONG) SUPER_BLOCK_OFFSET;
     rc = Ext2SaveBuffer( IrpContext,
                          Vcb,
                          offset,
-                         SUPER_BLOCK_SIZE,
+                         sizeof(EXT2_SUPER_BLOCK),
                          Vcb->SuperBlock
                        );
 
@@ -101,7 +102,7 @@ Ext2RefreshSuper (
     if (!CcCopyRead(
                 Vcb->Volume,
                 (PLARGE_INTEGER)&offset,
-                SUPER_BLOCK_SIZE,
+                sizeof(EXT2_SUPER_BLOCK),
                 TRUE,
                 (PVOID)Vcb->SuperBlock,
                 &iosb )) {
@@ -131,7 +132,7 @@ Ext2RefreshSuper (
 VOID
 Ext2DropGroupBH(IN PEXT2_VCB Vcb)
 {
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
     unsigned long i;
 
     if (NULL == Vcb->sbi.s_gd) {
@@ -149,7 +150,7 @@ Ext2DropGroupBH(IN PEXT2_VCB Vcb)
 VOID
 Ext2PutGroup(IN PEXT2_VCB Vcb)
 {
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
     unsigned long i;
 
 
@@ -170,7 +171,7 @@ BOOLEAN
 Ext2LoadGroupBH(IN PEXT2_VCB Vcb)
 {
     struct super_block  *sb = &Vcb->sb;
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
     unsigned long i;
     BOOLEAN rc = FALSE;
 
@@ -207,7 +208,7 @@ BOOLEAN
 Ext2LoadGroup(IN PEXT2_VCB Vcb)
 {
     struct super_block  *sb = &Vcb->sb;
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
     ext3_fsblk_t sb_block = 1;
     unsigned long i;
     BOOLEAN rc = FALSE;
@@ -265,7 +266,7 @@ Ext2LoadGroup(IN PEXT2_VCB Vcb)
 VOID
 Ext2DropBH(IN PEXT2_VCB Vcb)
 {
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
 
     /* do nothing if Vcb is not initialized yet */
     if (!IsFlagOn(Vcb->Flags, VCB_INITIALIZED))
@@ -323,7 +324,7 @@ NTSTATUS
 Ext2FlushVcb(IN PEXT2_VCB Vcb)
 {
     LARGE_INTEGER        s = {0}, o;
-    struct ext3_sb_info *sbi = &Vcb->sbi;
+    struct ext4_sb_info *sbi = &Vcb->sbi;
     struct rb_node      *node;
     struct buffer_head  *bh;
 
@@ -397,7 +398,7 @@ Ext2SaveGroup(
     if (!gd)
         return 0;
 
-    gd->bg_checksum = ext4_group_desc_csum(&Vcb->sbi, Group, gd);
+    ext4_group_desc_csum_set(&Vcb->sb, Group, gd);
     mark_buffer_dirty(gb);
     fini_bh(&gb);
 
@@ -449,7 +450,7 @@ Ext2GetInodeLba (
     return TRUE;
 }
 
-void Ext2DecodeInode(struct inode *dst, struct ext3_inode *src)
+void Ext2DecodeInode(struct inode *dst, struct ext4_inode *src)
 {
     dst->i_mode = src->i_mode;
     dst->i_flags = src->i_flags;
@@ -457,7 +458,7 @@ void Ext2DecodeInode(struct inode *dst, struct ext3_inode *src)
     dst->i_gid = src->i_gid;
     dst->i_nlink = src->i_links_count;
     dst->i_generation = src->i_generation;
-    dst->i_size = src->i_size;
+    dst->i_size = src->i_size_lo;
     if (S_ISREG(src->i_mode)) {
         dst->i_size |= (loff_t)src->i_size_high << 32;
     }
@@ -469,14 +470,14 @@ void Ext2DecodeInode(struct inode *dst, struct ext3_inode *src)
     dst->i_dtime = src->i_dtime;
     dst->i_blocks = ext3_inode_blocks(src, dst);
     memcpy(&dst->i_block[0], &src->i_block[0], sizeof(__u32) * 15);
-    if (EXT3_HAS_RO_COMPAT_FEATURE(dst->i_sb,
+    if (EXT4_HAS_RO_COMPAT_FEATURE(dst->i_sb,
                                    EXT4_FEATURE_RO_COMPAT_EXTRA_ISIZE))
         dst->i_extra_isize = src->i_extra_isize;
     else
         dst->i_extra_isize = 0;
 }
 
-void Ext2EncodeInode(struct ext3_inode *dst,  struct inode *src)
+void Ext2EncodeInode(struct ext4_inode *dst,  struct inode *src)
 {
     dst->i_mode = src->i_mode;
     dst->i_flags = src->i_flags;
@@ -484,7 +485,7 @@ void Ext2EncodeInode(struct ext3_inode *dst,  struct inode *src)
     dst->i_gid = src->i_gid;
     dst->i_links_count = src->i_nlink;
     dst->i_generation = src->i_generation;
-    dst->i_size = (__u32)src->i_size;
+    dst->i_size_lo = (__u32)src->i_size;
     if (S_ISREG(src->i_mode)) {
         dst->i_size_high = (__u32)(src->i_size >> 32);
     }
@@ -498,7 +499,7 @@ void Ext2EncodeInode(struct ext3_inode *dst,  struct inode *src)
     ASSERT(src->i_sb);
     ext3_inode_blocks_set(dst, src);
     memcpy(&dst->i_block[0], &src->i_block[0], sizeof(__u32) * 15);
-    if (EXT3_HAS_RO_COMPAT_FEATURE(src->i_sb,
+    if (EXT4_HAS_RO_COMPAT_FEATURE(src->i_sb,
                                    EXT4_FEATURE_RO_COMPAT_EXTRA_ISIZE))
         dst->i_extra_isize = src->i_extra_isize;
 }
@@ -508,19 +509,30 @@ BOOLEAN
 Ext2LoadInode (IN PEXT2_VCB Vcb,
                IN struct inode *Inode)
 {
-    struct ext3_inode   ext3i = {0};
-    LONGLONG            offset;
+    struct ext4_inode*      ext4i;
+    struct ext4_inode_info  unused = {0};
+    LONGLONG                offset;
 
     if (!Ext2GetInodeLba(Vcb, Inode->i_ino, &offset))  {
         DEBUG(DL_ERR, ("Ext2LoadInode: failed inode %u.\n", Inode->i_ino));
         return FALSE;
     }
 
-    if (!Ext2LoadBuffer(NULL, Vcb, offset, sizeof(ext3i), &ext3i)) {
+    ext4i = (struct ext4_inode*) Ext2AllocatePool(NonPagedPool, EXT4_INODE_SIZE(Inode->i_sb), EXT2_INODE_MAGIC);
+    if (!ext4i) {
         return FALSE;
     }
 
-    Ext2DecodeInode(Inode, &ext3i);
+    if (!Ext2LoadBuffer(NULL, Vcb, offset, EXT4_INODE_SIZE(Inode->i_sb), ext4i)) {
+        ExFreePool(ext4i);
+        return FALSE;
+    }
+
+    Ext2DecodeInode(Inode, ext4i);
+
+    ext4_inode_csum_verify(Inode, ext4i, &unused);
+
+    ExFreePool(ext4i);
 
     return TRUE;
 }
@@ -553,34 +565,43 @@ Ext2SaveInode ( IN PEXT2_IRP_CONTEXT IrpContext,
                 IN PEXT2_VCB Vcb,
                 IN struct inode *Inode)
 {
-    struct ext3_inode   ext3i = {0};
-
-    LONGLONG            Offset = 0;
-    ULONG               InodeSize = sizeof(ext3i);
-    BOOLEAN             rc = 0;
+    struct ext4_inode*      ext4i;
+    struct ext4_inode_info  unused = {0};
+    LONGLONG                offset;
+    BOOLEAN                 rc = 0;
 
     DEBUG(DL_INF, ( "Ext2SaveInode: Saving Inode %xh: Mode=%xh Size=%xh\n",
                     Inode->i_ino, Inode->i_mode, Inode->i_size));
-    rc = Ext2GetInodeLba(Vcb,  Inode->i_ino, &Offset);
+    rc = Ext2GetInodeLba(Vcb,  Inode->i_ino, &offset);
     if (!rc)  {
         DEBUG(DL_ERR, ( "Ext2SaveInode: failed inode %u.\n", Inode->i_ino));
         goto errorout;
     }
 
-    rc = Ext2LoadBuffer(NULL, Vcb, Offset, InodeSize, &ext3i);
-    if (!rc) {
-        DEBUG(DL_ERR, ( "Ext2SaveInode: failed reading inode %u.\n", Inode->i_ino));
-        goto errorout;;
+    ext4i = (struct ext4_inode*) Ext2AllocatePool(NonPagedPool, EXT4_INODE_SIZE(Inode->i_sb), EXT2_INODE_MAGIC);
+    if (!ext4i) {
+        rc = FALSE;
+        goto errorout;
     }
 
-    Ext2EncodeInode(&ext3i, Inode);
-    if (InodeSize > Vcb->InodeSize)
-        InodeSize = Vcb->InodeSize;
-    rc = Ext2SaveBuffer(IrpContext, Vcb, Offset, InodeSize, &ext3i);
+    rc = Ext2LoadBuffer(NULL, Vcb, offset, EXT4_INODE_SIZE(Inode->i_sb), ext4i);
+    if (!rc) {
+        DEBUG(DL_ERR, ( "Ext2SaveInode: failed reading inode %u.\n", Inode->i_ino));
+        ExFreePool(ext4i);
+        goto errorout;
+    }
+
+    Ext2EncodeInode(ext4i, Inode);
+
+    ext4_inode_csum_set(Inode, ext4i, &unused);
+
+    rc = Ext2SaveBuffer(IrpContext, Vcb, offset, EXT4_INODE_SIZE(Inode->i_sb), ext4i);
 
     if (rc && IsFlagOn(Vcb->Flags, VCB_FLOPPY_DISK)) {
         Ext2StartFloppyFlushDpc(Vcb, NULL, NULL);
     }
+
+    ExFreePool(ext4i);
 
 errorout:
     return rc;
@@ -934,7 +955,7 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc = 0;
 
-    __try {
+    _SEH2_TRY {
 
         while (size) {
 
@@ -956,21 +977,21 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
             if (!bh) {
                 DEBUG(DL_ERR, ("Ext2SaveBuffer: can't load block %I64u\n", block));
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (!buffer_uptodate(bh)) {
 	            int err = bh_submit_read(bh);
 	            if (err < 0) {
 		            DEBUG(DL_ERR, ("Ext2SaveBuffer: bh_submit_read failed: %d\n", err));
-		            __leave;
+		            _SEH2_LEAVE;
 	            }
             }
 
-            __try {
+            _SEH2_TRY {
                 RtlCopyMemory(bh->b_data + delta, buf, len);
                 mark_buffer_dirty(bh);
-            } __finally {
+            } _SEH2_FINALLY {
                 fini_bh(&bh);
             }
 
@@ -981,12 +1002,12 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
 
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
 
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -1071,10 +1092,10 @@ Again:
             Status = STATUS_INSUFFICIENT_RESOURCES;
             goto errorout;
         }
-        gd->bg_checksum = ext4_group_desc_csum(EXT3_SB(sb), Group, gd);
         ext4_init_block_bitmap(sb, bh, Group, gd);
         set_buffer_uptodate(bh);
         gd->bg_flags &= cpu_to_le16(~EXT4_BG_BLOCK_UNINIT);
+        ext4_block_bitmap_csum_set(sb, Group, gd, bh);
         Ext2SaveGroup(IrpContext, Vcb, Group);
     } else {
         bh = sb_getblk(sb, bitmap_blk);
@@ -1130,6 +1151,7 @@ Again:
 
                 /* no blocks found: set bg_free_blocks_count to 0 */
                 ext4_free_blks_set(sb, gd, 0);
+                ext4_block_bitmap_csum_set(sb, Group, gd, bh);
                 Ext2SaveGroup(IrpContext, Vcb, Group);
 
                 /* will try next group */
@@ -1166,6 +1188,7 @@ Again:
 
         /* update group description */
         ext4_free_blks_set(sb, gd, RtlNumberOfClearBits(&BlockBitmap));
+        ext4_block_bitmap_csum_set(sb, Group, gd, bh);
         Ext2SaveGroup(IrpContext, Vcb, Group);
 
         /* update Vcb free blocks */
@@ -1224,6 +1247,7 @@ Ext2FreeBlock(
     struct super_block     *sb = &Vcb->sb;
     PEXT2_GROUP_DESC        gd;
     struct buffer_head     *gb = NULL;
+    struct buffer_head      bh;
     ext4_fsblk_t            bitmap_blk;
 
     RTL_BITMAP      BlockBitmap;
@@ -1315,6 +1339,9 @@ Again:
 
         /* update group description table */
         ext4_free_blks_set(sb, gd, RtlNumberOfClearBits(&BlockBitmap));
+
+        bh.b_data = BitmapCache;
+        ext4_block_bitmap_csum_set(sb, Group, gd, &bh);
 
         /* indict the cache range is dirty */
         CcSetDirtyPinnedData(BitmapBcb, NULL );
@@ -1587,10 +1614,10 @@ repeat:
             Status = STATUS_INSUFFICIENT_RESOURCES;
             goto errorout;
         }
-        gd->bg_checksum = ext4_group_desc_csum(EXT3_SB(sb), Group, gd);
         ext4_init_inode_bitmap(sb, bh, Group, gd);
         set_buffer_uptodate(bh);
         gd->bg_flags &= cpu_to_le16(~EXT4_BG_INODE_UNINIT);
+        ext4_inode_bitmap_csum_set(sb, Group, gd, bh, EXT4_INODES_PER_GROUP(sb) / 8);
         Ext2SaveGroup(IrpContext, Vcb, Group);
     } else {
         bh = sb_getblk(sb, bitmap_blk);
@@ -1651,7 +1678,8 @@ repeat:
 
         /* If we didn't allocate from within the initialized part of the inode
          * table then we need to initialize up to this inode. */
-        if (EXT3_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_GDT_CSUM)) {
+        if (EXT4_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_GDT_CSUM) ||
+            EXT4_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_METADATA_CSUM)) {
 
             __u32 free;
 
@@ -1688,8 +1716,8 @@ repeat:
                 /* recheck and clear flag under lock if we still need to */
                 block_bitmap_bh = sb_getblk_zero(sb, ext4_block_bitmap(sb, gd));
                 if (block_bitmap_bh) {
-                    gd->bg_checksum = ext4_group_desc_csum(EXT3_SB(sb), Group, gd);
                     free = ext4_init_block_bitmap(sb, block_bitmap_bh, Group, gd);
+                    ext4_block_bitmap_csum_set(sb, Group, gd, block_bitmap_bh);
                     set_buffer_uptodate(block_bitmap_bh);
                     brelse(block_bitmap_bh);
                     gd->bg_flags &= cpu_to_le16(~EXT4_BG_BLOCK_UNINIT);
@@ -1705,6 +1733,7 @@ repeat:
         if (Type == EXT2_FT_DIR) {
             ext4_used_dirs_set(sb, gd, ext4_used_dirs_count(sb, gd) + 1);
         }
+        ext4_inode_bitmap_csum_set(sb, Group, gd, bh, EXT4_INODES_PER_GROUP(sb) / 8);
         Ext2SaveGroup(IrpContext, Vcb, Group);
         Ext2UpdateVcbStat(IrpContext, Vcb);
         Status = STATUS_SUCCESS;
@@ -1856,6 +1885,7 @@ Ext2FreeInode(
             ext4_used_dirs_set(sb, gd,
                                ext4_used_dirs_count(sb, gd) - 1);
         }
+        ext4_inode_bitmap_csum_set(sb, Group, gd, bh, EXT4_INODES_PER_GROUP(sb) / 8);
         Ext2SaveGroup(IrpContext, Vcb, Group);
         Ext2UpdateVcbStat(IrpContext, Vcb);
         Status = STATUS_SUCCESS;
@@ -1963,7 +1993,7 @@ Ext2SetFileType (
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
     BOOLEAN  MainResourceAcquired = FALSE;
 
-    if (!EXT3_HAS_INCOMPAT_FEATURE(dir->i_sb, EXT3_FEATURE_INCOMPAT_FILETYPE)) {
+    if (!EXT4_HAS_INCOMPAT_FEATURE(dir->i_sb, EXT3_FEATURE_INCOMPAT_FILETYPE)) {
         return STATUS_SUCCESS;
     }
 
@@ -2223,7 +2253,7 @@ int ext3_check_dir_entry (const char * function, struct inode * dir,
     else if ((char *) de + rlen > bh->b_data + dir->i_sb->s_blocksize)
         error_msg = "directory entry across blocks";
     else if (le32_to_cpu(de->inode) >
-             le32_to_cpu(EXT3_SB(dir->i_sb)->s_es->s_inodes_count))
+             le32_to_cpu(EXT4_SB(dir->i_sb)->s_es->s_inodes_count))
         error_msg = "inode out of bounds";
 
     if (error_msg != NULL) {
@@ -2392,18 +2422,18 @@ loff_t ext3_max_bitmap_size(int bits, int has_huge_files)
     return res;
 }
 
-blkcnt_t ext3_inode_blocks(struct ext3_inode *raw_inode,
+blkcnt_t ext3_inode_blocks(struct ext4_inode *raw_inode,
                            struct inode *inode)
 {
     blkcnt_t i_blocks ;
     struct super_block *sb = inode->i_sb;
     PEXT2_VCB Vcb = (PEXT2_VCB)sb->s_priv;
 
-    if (EXT3_HAS_RO_COMPAT_FEATURE(sb,
+    if (EXT4_HAS_RO_COMPAT_FEATURE(sb,
                                    EXT4_FEATURE_RO_COMPAT_HUGE_FILE)) {
         /* we are using combined 48 bit field */
         i_blocks = ((u64)le16_to_cpu(raw_inode->i_blocks_high)) << 32 |
-                   le32_to_cpu(raw_inode->i_blocks);
+                   le32_to_cpu(raw_inode->i_blocks_lo);
         if (inode->i_flags & EXT4_HUGE_FILE_FL) {
             /* i_blocks represent file system block size */
             return i_blocks  << (BLOCK_BITS - 9);
@@ -2411,11 +2441,11 @@ blkcnt_t ext3_inode_blocks(struct ext3_inode *raw_inode,
             return i_blocks;
         }
     } else {
-        return le32_to_cpu(raw_inode->i_blocks);
+        return le32_to_cpu(raw_inode->i_blocks_lo);
     }
 }
 
-int ext3_inode_blocks_set(struct ext3_inode *raw_inode,
+int ext3_inode_blocks_set(struct ext4_inode *raw_inode,
                           struct inode * inode)
 {
     u64 i_blocks = inode->i_blocks;
@@ -2427,13 +2457,13 @@ int ext3_inode_blocks_set(struct ext3_inode *raw_inode,
          * i_blocks can be represnted in a 32 bit variable
          * as multiple of 512 bytes
          */
-        raw_inode->i_blocks = cpu_to_le32(i_blocks);
+        raw_inode->i_blocks_lo = cpu_to_le32(i_blocks);
         raw_inode->i_blocks_high = 0;
         inode->i_flags &= ~EXT4_HUGE_FILE_FL;
         return 0;
     }
 
-    if (!EXT3_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_HUGE_FILE)) {
+    if (!EXT4_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_HUGE_FILE)) {
         EXT3_SET_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_HUGE_FILE);
         Ext2SaveSuper(NULL, Vcb);
     }
@@ -2443,14 +2473,14 @@ int ext3_inode_blocks_set(struct ext3_inode *raw_inode,
          * i_blocks can be represented in a 48 bit variable
          * as multiple of 512 bytes
          */
-        raw_inode->i_blocks = (__u32)cpu_to_le32(i_blocks);
+        raw_inode->i_blocks_lo = (__u32)cpu_to_le32(i_blocks);
         raw_inode->i_blocks_high = (__u16)cpu_to_le16(i_blocks >> 32);
         inode->i_flags &= ~EXT4_HUGE_FILE_FL;
     } else {
         inode->i_flags |= EXT4_HUGE_FILE_FL;
         /* i_block is stored in file system block size */
         i_blocks = i_blocks >> (BLOCK_BITS - 9);
-        raw_inode->i_blocks  = (__u32)cpu_to_le32(i_blocks);
+        raw_inode->i_blocks_lo  = (__u32)cpu_to_le32(i_blocks);
         raw_inode->i_blocks_high = (__u16)cpu_to_le16(i_blocks >> 32);
     }
     return 0;
@@ -2459,7 +2489,7 @@ int ext3_inode_blocks_set(struct ext3_inode *raw_inode,
 ext4_fsblk_t ext4_block_bitmap(struct super_block *sb,
                                struct ext4_group_desc *bg)
 {
-    return le32_to_cpu(bg->bg_block_bitmap) |
+    return le32_to_cpu(bg->bg_block_bitmap_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (ext4_fsblk_t)le32_to_cpu(bg->bg_block_bitmap_hi) << 32 : 0);
 }
@@ -2467,7 +2497,7 @@ ext4_fsblk_t ext4_block_bitmap(struct super_block *sb,
 ext4_fsblk_t ext4_inode_bitmap(struct super_block *sb,
                                struct ext4_group_desc *bg)
 {
-    return le32_to_cpu(bg->bg_inode_bitmap) |
+    return le32_to_cpu(bg->bg_inode_bitmap_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (ext4_fsblk_t)le32_to_cpu(bg->bg_inode_bitmap_hi) << 32 : 0);
 }
@@ -2475,7 +2505,7 @@ ext4_fsblk_t ext4_inode_bitmap(struct super_block *sb,
 ext4_fsblk_t ext4_inode_table(struct super_block *sb,
                               struct ext4_group_desc *bg)
 {
-    return le32_to_cpu(bg->bg_inode_table) |
+    return le32_to_cpu(bg->bg_inode_table_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (ext4_fsblk_t)le32_to_cpu(bg->bg_inode_table_hi) << 32 : 0);
 }
@@ -2483,7 +2513,7 @@ ext4_fsblk_t ext4_inode_table(struct super_block *sb,
 __u32 ext4_free_blks_count(struct super_block *sb,
                            struct ext4_group_desc *bg)
 {
-    return le16_to_cpu(bg->bg_free_blocks_count) |
+    return le16_to_cpu(bg->bg_free_blocks_count_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (__u32)le16_to_cpu(bg->bg_free_blocks_count_hi) << 16 : 0);
 }
@@ -2491,7 +2521,7 @@ __u32 ext4_free_blks_count(struct super_block *sb,
 __u32 ext4_free_inodes_count(struct super_block *sb,
                              struct ext4_group_desc *bg)
 {
-    return le16_to_cpu(bg->bg_free_inodes_count) |
+    return le16_to_cpu(bg->bg_free_inodes_count_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (__u32)le16_to_cpu(bg->bg_free_inodes_count_hi) << 16 : 0);
 }
@@ -2499,7 +2529,7 @@ __u32 ext4_free_inodes_count(struct super_block *sb,
 __u32 ext4_used_dirs_count(struct super_block *sb,
                            struct ext4_group_desc *bg)
 {
-    return le16_to_cpu(bg->bg_used_dirs_count) |
+    return le16_to_cpu(bg->bg_used_dirs_count_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (__u32)le16_to_cpu(bg->bg_used_dirs_count_hi) << 16 : 0);
 }
@@ -2507,7 +2537,7 @@ __u32 ext4_used_dirs_count(struct super_block *sb,
 __u32 ext4_itable_unused_count(struct super_block *sb,
                                struct ext4_group_desc *bg)
 {
-    return le16_to_cpu(bg->bg_itable_unused) |
+    return le16_to_cpu(bg->bg_itable_unused_lo) |
            (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT ?
             (__u32)le16_to_cpu(bg->bg_itable_unused_hi) << 16 : 0);
 }
@@ -2515,7 +2545,7 @@ __u32 ext4_itable_unused_count(struct super_block *sb,
 void ext4_block_bitmap_set(struct super_block *sb,
                            struct ext4_group_desc *bg, ext4_fsblk_t blk)
 {
-    bg->bg_block_bitmap = cpu_to_le32((u32)blk);
+    bg->bg_block_bitmap_lo = cpu_to_le32((u32)blk);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_block_bitmap_hi = cpu_to_le32(blk >> 32);
 }
@@ -2523,7 +2553,7 @@ void ext4_block_bitmap_set(struct super_block *sb,
 void ext4_inode_bitmap_set(struct super_block *sb,
                            struct ext4_group_desc *bg, ext4_fsblk_t blk)
 {
-    bg->bg_inode_bitmap  = cpu_to_le32((u32)blk);
+    bg->bg_inode_bitmap_lo  = cpu_to_le32((u32)blk);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_inode_bitmap_hi = cpu_to_le32(blk >> 32);
 }
@@ -2531,7 +2561,7 @@ void ext4_inode_bitmap_set(struct super_block *sb,
 void ext4_inode_table_set(struct super_block *sb,
                           struct ext4_group_desc *bg, ext4_fsblk_t blk)
 {
-    bg->bg_inode_table = cpu_to_le32((u32)blk);
+    bg->bg_inode_table_lo = cpu_to_le32((u32)blk);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_inode_table_hi = cpu_to_le32(blk >> 32);
 }
@@ -2539,7 +2569,7 @@ void ext4_inode_table_set(struct super_block *sb,
 void ext4_free_blks_set(struct super_block *sb,
                         struct ext4_group_desc *bg, __u32 count)
 {
-    bg->bg_free_blocks_count = cpu_to_le16((__u16)count);
+    bg->bg_free_blocks_count_lo = cpu_to_le16((__u16)count);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_free_blocks_count_hi = cpu_to_le16(count >> 16);
 }
@@ -2547,7 +2577,7 @@ void ext4_free_blks_set(struct super_block *sb,
 void ext4_free_inodes_set(struct super_block *sb,
                           struct ext4_group_desc *bg, __u32 count)
 {
-    bg->bg_free_inodes_count = cpu_to_le16((__u16)count);
+    bg->bg_free_inodes_count_lo = cpu_to_le16((__u16)count);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_free_inodes_count_hi = cpu_to_le16(count >> 16);
 }
@@ -2555,7 +2585,7 @@ void ext4_free_inodes_set(struct super_block *sb,
 void ext4_used_dirs_set(struct super_block *sb,
                         struct ext4_group_desc *bg, __u32 count)
 {
-    bg->bg_used_dirs_count = cpu_to_le16((__u16)count);
+    bg->bg_used_dirs_count_lo = cpu_to_le16((__u16)count);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_used_dirs_count_hi = cpu_to_le16(count >> 16);
 }
@@ -2563,98 +2593,10 @@ void ext4_used_dirs_set(struct super_block *sb,
 void ext4_itable_unused_set(struct super_block *sb,
                             struct ext4_group_desc *bg, __u32 count)
 {
-    bg->bg_itable_unused = cpu_to_le16((__u16)count);
+    bg->bg_itable_unused_lo = cpu_to_le16((__u16)count);
     if (EXT4_DESC_SIZE(sb) >= EXT4_MIN_DESC_SIZE_64BIT)
         bg->bg_itable_unused_hi = cpu_to_le16(count >> 16);
 }
-
-/** CRC table for the CRC-16. The poly is 0x8005 (x16 + x15 + x2 + 1) */
-__u16 const crc16_table[256] = {
-    0x0000, 0xC0C1, 0xC181, 0x0140, 0xC301, 0x03C0, 0x0280, 0xC241,
-    0xC601, 0x06C0, 0x0780, 0xC741, 0x0500, 0xC5C1, 0xC481, 0x0440,
-    0xCC01, 0x0CC0, 0x0D80, 0xCD41, 0x0F00, 0xCFC1, 0xCE81, 0x0E40,
-    0x0A00, 0xCAC1, 0xCB81, 0x0B40, 0xC901, 0x09C0, 0x0880, 0xC841,
-    0xD801, 0x18C0, 0x1980, 0xD941, 0x1B00, 0xDBC1, 0xDA81, 0x1A40,
-    0x1E00, 0xDEC1, 0xDF81, 0x1F40, 0xDD01, 0x1DC0, 0x1C80, 0xDC41,
-    0x1400, 0xD4C1, 0xD581, 0x1540, 0xD701, 0x17C0, 0x1680, 0xD641,
-    0xD201, 0x12C0, 0x1380, 0xD341, 0x1100, 0xD1C1, 0xD081, 0x1040,
-    0xF001, 0x30C0, 0x3180, 0xF141, 0x3300, 0xF3C1, 0xF281, 0x3240,
-    0x3600, 0xF6C1, 0xF781, 0x3740, 0xF501, 0x35C0, 0x3480, 0xF441,
-    0x3C00, 0xFCC1, 0xFD81, 0x3D40, 0xFF01, 0x3FC0, 0x3E80, 0xFE41,
-    0xFA01, 0x3AC0, 0x3B80, 0xFB41, 0x3900, 0xF9C1, 0xF881, 0x3840,
-    0x2800, 0xE8C1, 0xE981, 0x2940, 0xEB01, 0x2BC0, 0x2A80, 0xEA41,
-    0xEE01, 0x2EC0, 0x2F80, 0xEF41, 0x2D00, 0xEDC1, 0xEC81, 0x2C40,
-    0xE401, 0x24C0, 0x2580, 0xE541, 0x2700, 0xE7C1, 0xE681, 0x2640,
-    0x2200, 0xE2C1, 0xE381, 0x2340, 0xE101, 0x21C0, 0x2080, 0xE041,
-    0xA001, 0x60C0, 0x6180, 0xA141, 0x6300, 0xA3C1, 0xA281, 0x6240,
-    0x6600, 0xA6C1, 0xA781, 0x6740, 0xA501, 0x65C0, 0x6480, 0xA441,
-    0x6C00, 0xACC1, 0xAD81, 0x6D40, 0xAF01, 0x6FC0, 0x6E80, 0xAE41,
-    0xAA01, 0x6AC0, 0x6B80, 0xAB41, 0x6900, 0xA9C1, 0xA881, 0x6840,
-    0x7800, 0xB8C1, 0xB981, 0x7940, 0xBB01, 0x7BC0, 0x7A80, 0xBA41,
-    0xBE01, 0x7EC0, 0x7F80, 0xBF41, 0x7D00, 0xBDC1, 0xBC81, 0x7C40,
-    0xB401, 0x74C0, 0x7580, 0xB541, 0x7700, 0xB7C1, 0xB681, 0x7640,
-    0x7200, 0xB2C1, 0xB381, 0x7340, 0xB101, 0x71C0, 0x7080, 0xB041,
-    0x5000, 0x90C1, 0x9181, 0x5140, 0x9301, 0x53C0, 0x5280, 0x9241,
-    0x9601, 0x56C0, 0x5780, 0x9741, 0x5500, 0x95C1, 0x9481, 0x5440,
-    0x9C01, 0x5CC0, 0x5D80, 0x9D41, 0x5F00, 0x9FC1, 0x9E81, 0x5E40,
-    0x5A00, 0x9AC1, 0x9B81, 0x5B40, 0x9901, 0x59C0, 0x5880, 0x9841,
-    0x8801, 0x48C0, 0x4980, 0x8941, 0x4B00, 0x8BC1, 0x8A81, 0x4A40,
-    0x4E00, 0x8EC1, 0x8F81, 0x4F40, 0x8D01, 0x4DC0, 0x4C80, 0x8C41,
-    0x4400, 0x84C1, 0x8581, 0x4540, 0x8701, 0x47C0, 0x4680, 0x8641,
-    0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
-};
-
-static inline __u16 crc16_byte(__u16 crc, const __u8 data)
-{
-    return (crc >> 8) ^ crc16_table[(crc ^ data) & 0xff];
-}
-
-__u16 crc16(__u16 crc, __u8 const *buffer, size_t len)
-{
-    while (len--)
-        crc = crc16_byte(crc, *buffer++);
-    return crc;
-}
-
-__le16 ext4_group_desc_csum(struct ext3_sb_info *sbi, __u32 block_group,
-                            struct ext4_group_desc *gdp)
-{
-	int offset;
-	__u16 crc = 0;
-	__le32 le_group = cpu_to_le32(block_group);
-
-	/* old crc16 code */
-	if (!(sbi->s_es->s_feature_ro_compat &
-	      cpu_to_le32(EXT4_FEATURE_RO_COMPAT_GDT_CSUM)))
-		return 0;
-
-	offset = offsetof(struct ext4_group_desc, bg_checksum);
-
-	crc = crc16(~0, sbi->s_es->s_uuid, sizeof(sbi->s_es->s_uuid));
-	crc = crc16(crc, (__u8 *)&le_group, sizeof(le_group));
-	crc = crc16(crc, (__u8 *)gdp, offset);
-	offset += sizeof(gdp->bg_checksum); /* skip checksum */
-	/* for checksum of struct ext4_group_desc do the rest...*/
-	if ((sbi->s_es->s_feature_incompat &
-	     cpu_to_le32(EXT4_FEATURE_INCOMPAT_64BIT)) &&
-	    offset < le16_to_cpu(sbi->s_es->s_desc_size))
-		crc = crc16(crc, (__u8 *)gdp + offset,
-			    le16_to_cpu(sbi->s_es->s_desc_size) -
-				offset);
-
-	return cpu_to_le16(crc);
-}
-
-int ext4_group_desc_csum_verify(struct ext3_sb_info *sbi, __u32 block_group,
-                                struct ext4_group_desc *gdp)
-{
-    if ((sbi->s_es->s_feature_ro_compat & cpu_to_le32(EXT4_FEATURE_RO_COMPAT_GDT_CSUM)) &&
-        (gdp->bg_checksum != ext4_group_desc_csum(sbi, block_group, gdp)))
-        return 0;
-
-    return 1;
-}
-
 
 static inline int test_root(ext3_group_t a, ext3_group_t b)
 {
@@ -2685,7 +2627,7 @@ static int ext3_group_sparse(ext3_group_t group)
  */
 int ext3_bg_has_super(struct super_block *sb, ext3_group_t group)
 {
-    if (EXT3_HAS_RO_COMPAT_FEATURE(sb,
+    if (EXT4_HAS_RO_COMPAT_FEATURE(sb,
                                    EXT3_FEATURE_RO_COMPAT_SPARSE_SUPER) &&
             !ext3_group_sparse(group))
         return 0;
@@ -2707,7 +2649,7 @@ static unsigned long ext4_bg_num_gdb_meta(struct super_block *sb,
 static unsigned long ext4_bg_num_gdb_nometa(struct super_block *sb,
         ext4_group_t group)
 {
-    return ext3_bg_has_super(sb, group) ? EXT3_SB(sb)->s_gdb_count : 0;
+    return ext3_bg_has_super(sb, group) ? EXT4_SB(sb)->s_gdb_count : 0;
 }
 
 /**
@@ -2722,10 +2664,10 @@ static unsigned long ext4_bg_num_gdb_nometa(struct super_block *sb,
 unsigned long ext4_bg_num_gdb(struct super_block *sb, ext4_group_t group)
 {
     unsigned long first_meta_bg =
-        le32_to_cpu(EXT3_SB(sb)->s_es->s_first_meta_bg);
+        le32_to_cpu(EXT4_SB(sb)->s_es->s_first_meta_bg);
     unsigned long metagroup = group / EXT4_DESC_PER_BLOCK(sb);
 
-    if (!EXT3_HAS_INCOMPAT_FEATURE(sb,EXT4_FEATURE_INCOMPAT_META_BG) ||
+    if (!EXT4_HAS_INCOMPAT_FEATURE(sb,EXT4_FEATURE_INCOMPAT_META_BG) ||
             metagroup < first_meta_bg)
         return ext4_bg_num_gdb_nometa(sb, group);
 
@@ -2736,13 +2678,13 @@ unsigned long ext4_bg_num_gdb(struct super_block *sb, ext4_group_t group)
 ext3_fsblk_t descriptor_loc(struct super_block *sb,
                             ext3_fsblk_t logical_sb_block, unsigned int nr)
 {
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
     ext3_group_t bg, first_meta_bg;
     int has_super = 0;
 
     first_meta_bg = le32_to_cpu(sbi->s_es->s_first_meta_bg);
 
-    if (!EXT3_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_META_BG) ||
+    if (!EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_META_BG) ||
             nr < first_meta_bg)
         return logical_sb_block + nr + 1;
     bg = sbi->s_desc_per_block * nr;
@@ -2787,13 +2729,13 @@ unsigned ext4_init_inode_bitmap(struct super_block *sb, struct buffer_head *bh,
                                 ext4_group_t block_group,
                                 struct ext4_group_desc *gdp)
 {
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
 
     mark_buffer_dirty(bh);
 
     /* If checksum is bad mark all blocks and inodes use to prevent
      * allocation, essentially implementing a per-group read-only flag. */
-    if (!ext4_group_desc_csum_verify(sbi, block_group, gdp)) {
+    if (!ext4_group_desc_csum_verify(sb, block_group, gdp)) {
         ext4_error(sb, __FUNCTION__, "Checksum bad for group %u",
                    block_group);
         ext4_free_blks_set(sb, gdp, 0);
@@ -2817,7 +2759,7 @@ unsigned ext4_init_inode_bitmap(struct super_block *sb, struct buffer_head *bh,
 void ext4_get_group_no_and_offset(struct super_block *sb, ext4_fsblk_t blocknr,
                                   ext4_group_t *blockgrpp, ext4_grpblk_t *offsetp)
 {
-    struct ext3_super_block *es = EXT3_SB(sb)->s_es;
+    struct ext4_super_block *es = EXT4_SB(sb)->s_es;
     ext4_grpblk_t offset;
 
     blocknr = blocknr - le32_to_cpu(es->s_first_data_block);
@@ -2843,11 +2785,11 @@ static int ext4_group_used_meta_blocks(struct super_block *sb,
                                        ext4_group_t block_group)
 {
     ext4_fsblk_t tmp;
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
     /* block bitmap, inode bitmap, and inode table blocks */
     int used_blocks = sbi->s_itb_per_group + 2;
 
-    if (EXT3_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_FLEX_BG)) {
+    if (EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_FLEX_BG)) {
         struct ext4_group_desc *gdp;
         struct buffer_head *bh = NULL;
 
@@ -2879,13 +2821,13 @@ unsigned ext4_init_block_bitmap(struct super_block *sb, struct buffer_head *bh,
 {
     int bit, bit_max;
     unsigned free_blocks, group_blocks;
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
 
     if (bh) {
         mark_buffer_dirty(bh);
         /* If checksum is bad mark all blocks used to prevent allocation
          * essentially implementing a per-group read-only flag. */
-        if (!ext4_group_desc_csum_verify(sbi, block_group, gdp)) {
+        if (!ext4_group_desc_csum_verify(sb, block_group, gdp)) {
             ext4_error(sb, __FUNCTION__,
                        "Checksum bad for group %u", block_group);
             ext4_free_blks_set(sb, gdp, 0);
@@ -2900,7 +2842,7 @@ unsigned ext4_init_block_bitmap(struct super_block *sb, struct buffer_head *bh,
     /* Check for superblock and gdt backups in this group */
     bit_max = ext3_bg_has_super(sb, block_group);
 
-    if (!EXT3_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_META_BG) ||
+    if (!EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_META_BG) ||
             block_group < le32_to_cpu(sbi->s_es->s_first_meta_bg) *
             sbi->s_desc_per_block) {
         if (bit_max) {
@@ -2936,7 +2878,7 @@ unsigned ext4_init_block_bitmap(struct super_block *sb, struct buffer_head *bh,
 
         start = ext3_group_first_block_no(sb, block_group);
 
-        if (EXT3_HAS_INCOMPAT_FEATURE(sb,
+        if (EXT4_HAS_INCOMPAT_FEATURE(sb,
                                       EXT4_FEATURE_INCOMPAT_FLEX_BG))
             flex_bg = 1;
 
@@ -2977,7 +2919,7 @@ struct ext4_group_desc * ext4_get_group_desc(struct super_block *sb,
                     ext4_group_t block_group, struct buffer_head **bh)
 {
     struct ext4_group_desc *desc = NULL;
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
     PEXT2_VCB vcb = sb->s_priv;
     ext4_group_t group;
     ext4_group_t offset;
@@ -3036,7 +2978,7 @@ ext4_fsblk_t ext4_count_free_blocks(struct super_block *sb)
     struct ext4_group_desc *gdp;
     struct buffer_head *bh = NULL;
     ext4_group_t i;
-    ext4_group_t ngroups = EXT3_SB(sb)->s_groups_count;
+    ext4_group_t ngroups = EXT4_SB(sb)->s_groups_count;
 
     desc_count = 0;
     smp_rmb();
@@ -3059,7 +3001,7 @@ unsigned long ext4_count_free_inodes(struct super_block *sb)
     ext4_group_t i;
 
     desc_count = 0;
-    for (i = 0; i < EXT3_SB(sb)->s_groups_count; i++) {
+    for (i = 0; i < EXT4_SB(sb)->s_groups_count; i++) {
         gdp = ext4_get_group_desc(sb, i, &bh);
         if (!bh)
             continue;
@@ -3077,7 +3019,7 @@ unsigned long ext4_count_dirs(struct super_block * sb)
     unsigned long count = 0;
     ext4_group_t i;
 
-    for (i = 0; i < EXT3_SB(sb)->s_groups_count; i++) {
+    for (i = 0; i < EXT4_SB(sb)->s_groups_count; i++) {
         gdp = ext4_get_group_desc(sb, i, &bh);
         if (!bh)
             continue;
@@ -3091,7 +3033,7 @@ unsigned long ext4_count_dirs(struct super_block * sb)
 int ext4_check_descriptors(struct super_block *sb)
 {
     PEXT2_VCB            Vcb = sb->s_priv;
-    struct ext3_sb_info *sbi = EXT3_SB(sb);
+    struct ext4_sb_info *sbi = EXT4_SB(sb);
     ext4_fsblk_t first_block = le32_to_cpu(sbi->s_es->s_first_data_block);
     ext4_fsblk_t last_block;
     ext4_fsblk_t block_bitmap;
@@ -3100,7 +3042,7 @@ int ext4_check_descriptors(struct super_block *sb)
     int flexbg_flag = 0;
     ext4_group_t i;
 
-    if (EXT3_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_FLEX_BG))
+    if (EXT4_HAS_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_FLEX_BG))
         flexbg_flag = 1;
 
     DEBUG(DL_INF, ("Checking group descriptors"));
@@ -3145,16 +3087,9 @@ int ext4_check_descriptors(struct super_block *sb)
             return 0;
         }
 
-        if (!ext4_group_desc_csum_verify(sbi, i, gdp)) {
+        if (!ext4_group_desc_csum_verify(sb, i, gdp)) {
             printk(KERN_ERR "EXT4-fs: ext4_check_descriptors: "
-                   "Checksum for group %u failed (%u!=%u)\n",
-                   i, le16_to_cpu(ext4_group_desc_csum(sbi, i,
-                                                       gdp)),
-                   le16_to_cpu(gdp->bg_checksum));
-            if (!IsVcbReadOnly(Vcb)) {
-                __brelse(bh);
-                return 0;
-            }
+                   "Checksum for group %u failed.\n", i);
         }
 
         if (!flexbg_flag)

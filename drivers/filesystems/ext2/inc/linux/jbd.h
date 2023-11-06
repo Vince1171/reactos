@@ -24,15 +24,15 @@
 #else
 
 #include <linux/module.h>
-#include <linux/buffer_head.h>
+//#include <linux/buffer_head.h>
 #include <linux/journal-head.h>
 #include <linux/stddef.h>
 #include <linux/bit_spinlock.h>
-#include <linux/mutex.h>
-#include <linux/timer.h>
-#include <linux/lockdep.h>
+//#include <linux/mutex.h>
+//#include <linux/timer.h>
+//#include <linux/lockdep.h>
 
-#include <asm/semaphore.h>
+//#include <asm/semaphore.h>
 
 #define journal_oom_retry 1
 
@@ -269,16 +269,17 @@ typedef struct journal_superblock_s
 	 ((j)->j_superblock->s_feature_incompat & cpu_to_be32((mask))))
 
 #define JFS_FEATURE_INCOMPAT_REVOKE	0x00000001
+#define JFS_FEATURE_INCOMPAT_64BIT	0x00000002
 
 /* Features known to this kernel version: */
 #define JFS_KNOWN_COMPAT_FEATURES	0
 #define JFS_KNOWN_ROCOMPAT_FEATURES	0
-#define JFS_KNOWN_INCOMPAT_FEATURES	JFS_FEATURE_INCOMPAT_REVOKE
+#define JFS_KNOWN_INCOMPAT_FEATURES	(JFS_FEATURE_INCOMPAT_REVOKE | JFS_FEATURE_INCOMPAT_64BIT)
 
 #ifdef __KERNEL__
 
 #include <linux/fs.h>
-#include <linux/sched.h>
+//#include <linux/sched.h>
 
 #define J_ASSERT  ASSERT
 
@@ -923,9 +924,6 @@ static inline handle_t *journal_current_handle(void)
 {
     return NULL;
     /* return current->journal_info; */
-#ifdef _MSC_VER
-#pragma message("WARNINGS: journal_current_handle NOT implemented")
-#endif
 }
 
 /* The journaling code user interface:
