@@ -1355,7 +1355,7 @@ InstallExt2BootcodeToPartition(
             Status = CreateFreeLoaderIniForReactOSAndBootSector(
                          SystemRootPath->Buffer, DestinationArcPath->Buffer,
                          L"Linux", L"\"Linux\"",
-                         L"hd0", L"1", BootSector);
+                         SystemRootPath->Buffer, BootSector);
             if (!NT_SUCCESS(Status))
             {
                 DPRINT1("CreateFreeLoaderIniForReactOSAndBootSector() failed (Status %lx)\n", Status);
