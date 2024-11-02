@@ -564,7 +564,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
 
     EXT2_FILLDIR_CONTEXT    fc = { 0 };
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -577,7 +577,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -587,24 +587,24 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (!IsMounted(Vcb)) {
             Status = STATUS_VOLUME_DISMOUNTED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (FlagOn(Vcb->Flags, VCB_VOLUME_LOCKED)) {
             Status = STATUS_ACCESS_DENIED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         FileObject = IrpContext->FileObject;
         Fcb = (PEXT2_FCB) FileObject->FsContext;
         if (Fcb == NULL) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         Mcb = Fcb->Mcb;
         if (NULL == Mcb) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         ASSERT (!IsMcbSymLink(Mcb));
 
@@ -613,7 +613,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (Fcb->Identifier.Type == EXT2VCB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
@@ -621,12 +621,12 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (!IsMcbDirectory(Mcb)) {
             Status = STATUS_NOT_A_DIRECTORY;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (IsFileDeleted(Mcb)) {
             Status = STATUS_NOT_A_DIRECTORY;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
@@ -675,19 +675,19 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
         if (Buffer == NULL) {
             DbgBreak();
             Status = STATUS_INVALID_USER_BUFFER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT)) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ExAcquireResourceSharedLite(
                     &Fcb->MainResource,
                     IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         FcbResourceAcquired = TRUE;
 
@@ -712,7 +712,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
                 if (Ccb->DirectorySearchPattern.Buffer == NULL) {
                     DEBUG(DL_ERR, ( "Ex2QueryDirectory: failed to allocate SerarchPattern.\n"));
                     Status = STATUS_INSUFFICIENT_RESOURCES;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 INC_MEM_COUNT( PS_DIR_PATTERN,
@@ -725,7 +725,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
                              FALSE);
 
                 if (!NT_SUCCESS(Status)) {
-                    __leave;
+                    _SEH2_LEAVE;
                 }
             }
 
@@ -747,7 +747,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
             if (Ccb->DirectorySearchPattern.Buffer == NULL) {
                 DEBUG(DL_ERR, ( "Ex2QueryDirectory: failed to allocate SerarchPattern (1st).\n"));
                 Status = STATUS_INSUFFICIENT_RESOURCES;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             INC_MEM_COUNT( PS_DIR_PATTERN,
@@ -801,7 +801,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (Mcb->Inode.i_size <= Ccb->filp.f_pos) {
             Status = STATUS_NO_MORE_FILES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         pDir = Ext2AllocatePool(
@@ -813,7 +813,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!pDir) {
             DEBUG(DL_ERR, ( "Ex2QueryDirectory: failed to allocate pDir.\n"));
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         INC_MEM_COUNT(PS_DIR_ENTRY, pDir, sizeof(EXT2_DIR_ENTRY2));
@@ -839,7 +839,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
 
             if (!NT_SUCCESS(Status)) {
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (pDir->rec_len == 0) {
@@ -894,7 +894,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
                     DEBUG(DL_ERR, ( "Ex2QueryDirectory: failed to "
                                     "allocate InodeFileName.\n"));
                     Status = STATUS_INSUFFICIENT_RESOURCES;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
                 INC_MEM_COUNT(PS_INODE_NAME, Unicode.Buffer, Unicode.MaximumLength);
             }
@@ -906,7 +906,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
             if (!NT_SUCCESS(Status)) {
                 DEBUG(DL_ERR, ( "Ex2QueryDirectory: Ext2OEMtoUnicode failed with %xh.\n", Status));
                 Status = STATUS_INSUFFICIENT_RESOURCES;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             DEBUG(DL_CP, ( "Ex2QueryDirectory: process inode: %xh / %wZ (%d).\n",
@@ -954,7 +954,7 @@ Ext2QueryDirectory (IN PEXT2_IRP_CONTEXT IrpContext)
                             Status = STATUS_SUCCESS;
                         }
                     } else {
-                        __leave;
+                        _SEH2_LEAVE;
                     }
                     break;
                 }
@@ -990,7 +990,7 @@ errorout:
             Status = STATUS_SUCCESS;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -1026,7 +1026,7 @@ errorout:
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -1050,7 +1050,7 @@ Ext2NotifyChangeDirectory (
 
     BOOLEAN             bFcbAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -1066,7 +1066,7 @@ Ext2NotifyChangeDirectory (
 
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -1081,7 +1081,7 @@ Ext2NotifyChangeDirectory (
         if (Fcb->Identifier.Type == EXT2VCB) {
             DbgBreak();
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
                (Fcb->Identifier.Size == sizeof(EXT2_FCB)));
@@ -1094,13 +1094,13 @@ Ext2NotifyChangeDirectory (
         /* do nothing if target fie was deleted */
         if (FlagOn(Fcb->Flags, FCB_DELETE_PENDING)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!IsDirectory(Fcb)) {
             DbgBreak();
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (ExAcquireResourceExclusiveLite(
@@ -1109,7 +1109,7 @@ Ext2NotifyChangeDirectory (
             bFcbAcquired = TRUE;
         } else {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Irp = IrpContext->Irp;
@@ -1132,7 +1132,7 @@ Ext2NotifyChangeDirectory (
 
         if (FlagOn(Fcb->Flags, FCB_DELETE_PENDING)) {
             Status = STATUS_DELETE_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         FsRtlNotifyFullChangeDirectory( Vcb->NotifySync,
@@ -1150,7 +1150,7 @@ Ext2NotifyChangeDirectory (
 
         Status = STATUS_PENDING;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bFcbAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -1168,7 +1168,7 @@ Ext2NotifyChangeDirectory (
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

@@ -35,7 +35,7 @@ Ext2ShutDown (IN PEXT2_IRP_CONTEXT IrpContext)
 
     LARGE_INTEGER           SysTime, LinuxTime;
 
-    __try {
+    _SEH2_TRY {
 
         Status = STATUS_SUCCESS;
 
@@ -49,7 +49,7 @@ Ext2ShutDown (IN PEXT2_IRP_CONTEXT IrpContext)
                     &Ext2Global->Resource,
                     IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         GlobalResourceAcquired = TRUE;
@@ -95,7 +95,7 @@ Ext2ShutDown (IN PEXT2_IRP_CONTEXT IrpContext)
                 IoUnregisterFileSystem(Ext2Global->CdromdevObject);
         */
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
@@ -108,7 +108,7 @@ Ext2ShutDown (IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

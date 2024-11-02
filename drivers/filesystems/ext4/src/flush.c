@@ -65,12 +65,12 @@ Ext2FlushFile (
     ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
            (Fcb->Identifier.Size == sizeof(EXT2_FCB)));
 
-    __try {
+    _SEH2_TRY {
 
         /* do nothing if target fie was deleted */
         if (FlagOn(Fcb->Flags, FCB_DELETE_PENDING)) {
             IoStatus.Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* update timestamp and achieve attribute */
@@ -89,7 +89,7 @@ Ext2FlushFile (
 
         if (IsDirectory(Fcb)) {
             IoStatus.Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         DEBUG(DL_INF, ( "Ext2FlushFile: Flushing File Inode=%xh %S ...\n",
@@ -98,10 +98,10 @@ Ext2FlushFile (
         CcFlushCache(&(Fcb->SectionObject), NULL, 0, &IoStatus);
         ClearFlag(Fcb->Flags, FCB_FILE_MODIFIED);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         /* do cleanup here */
-    }
+    } _SEH2_END;
 
     return IoStatus.Status;
 }
@@ -159,7 +159,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
 
     BOOLEAN                 MainResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
 
@@ -173,7 +173,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -184,7 +184,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
         ASSERT(IsMounted(Vcb));
         if (IsVcbReadOnly(Vcb)) {
             Status =  STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Irp = IrpContext->Irp;
@@ -197,7 +197,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
         if (Ccb == NULL) {
             Status =  STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         MainResourceAcquired =
@@ -211,7 +211,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
             Ext2VerifyVcb(IrpContext, Vcb);
             Status = Ext2FlushFiles(IrpContext, (PEXT2_VCB)(FcbOrVcb), FALSE);
             if (NT_SUCCESS(Status)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             /* TO INVESTIGATE: Ext2FlushFiles will always return STATUS_SUCCESS so Ext2FlushVolume will never be called? */
@@ -238,7 +238,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
         DEBUG(DL_INF, ("Ext2Flush-post: total mcb records=%u\n",
                        FsRtlNumberOfRunsInLargeMcb(&Vcb->Extents)));
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (MainResourceAcquired) {
             ExReleaseResourceLite(&FcbOrVcb->MainResource);
@@ -273,7 +273,7 @@ Ext2Flush (IN PEXT2_IRP_CONTEXT IrpContext)
 
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

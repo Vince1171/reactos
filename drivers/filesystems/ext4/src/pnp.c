@@ -74,7 +74,7 @@ Ext2Pnp (IN PEXT2_IRP_CONTEXT IrpContext)
     PEXT2_VCB           Vcb = NULL;
     PDEVICE_OBJECT      DeviceObject;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
 
@@ -89,7 +89,7 @@ Ext2Pnp (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if ( !((Vcb->Identifier.Type == EXT2VCB) &&
                 (Vcb->Identifier.Size == sizeof(EXT2_VCB)))) {
-            __leave; // Status = STATUS_INVALID_PARAMETER
+            _SEH2_LEAVE; // Status = STATUS_INVALID_PARAMETER
         }
 
         Irp = IrpContext->Irp;
@@ -128,7 +128,7 @@ Ext2Pnp (IN PEXT2_IRP_CONTEXT IrpContext)
             break;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!IrpContext->ExceptionInProgress) {
             Irp = IrpContext->Irp;
@@ -148,7 +148,7 @@ Ext2Pnp (IN PEXT2_IRP_CONTEXT IrpContext)
 
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -165,7 +165,7 @@ Ext2PnpQueryRemove (
     BOOLEAN  bDeleted = FALSE;
     BOOLEAN  VcbAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         CcWaitForCurrentLazyWriterActivity();
 
@@ -188,7 +188,7 @@ Ext2PnpQueryRemove (
         Ext2PurgeVolume(Vcb, TRUE);
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         IoCopyCurrentIrpStackLocationToNext(IrpContext->Irp);
@@ -221,7 +221,7 @@ Ext2PnpQueryRemove (
             DEBUG(DL_PNP, ("Ext2PnpQueryRemove: Ext2FlushVolume bDelted=%xh ...\n", bDeleted));
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (VcbAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
@@ -233,7 +233,7 @@ Ext2PnpQueryRemove (
                                             IO_DISK_INCREMENT : IO_NO_INCREMENT) );
 
         IrpContext->Irp = NULL;
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -247,7 +247,7 @@ Ext2PnpRemove (
     KEVENT   Event;
     BOOLEAN  bDeleted;
 
-    __try {
+    _SEH2_TRY {
 
         DEBUG(DL_PNP, ("Ext2PnpRemove by Ext2Pnp ...\n"));
 
@@ -292,7 +292,7 @@ Ext2PnpRemove (
         bDeleted = Ext2CheckDismount(IrpContext, Vcb, TRUE);
         SetLongFlag(Vcb->Flags, VCB_DEVICE_REMOVED);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         IrpContext->Irp->IoStatus.Status = Status;
         Ext2CompleteRequest(
@@ -300,7 +300,7 @@ Ext2PnpRemove (
                                             IO_DISK_INCREMENT : IO_NO_INCREMENT) );
 
         IrpContext->Irp = NULL;
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -315,7 +315,7 @@ Ext2PnpSurpriseRemove (
     KEVENT   Event;
     BOOLEAN  bDeleted;
 
-    __try {
+    _SEH2_TRY {
 
         DEBUG(DL_PNP, ("Ext2PnpSupriseRemove by Ext2Pnp ...\n"));
 
@@ -362,7 +362,7 @@ Ext2PnpSurpriseRemove (
         bDeleted = Ext2CheckDismount(IrpContext, Vcb, TRUE);
         SetLongFlag(Vcb->Flags, VCB_DEVICE_REMOVED);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         IrpContext->Irp->IoStatus.Status = Status;
         Ext2CompleteRequest(
@@ -370,7 +370,7 @@ Ext2PnpSurpriseRemove (
                                             IO_DISK_INCREMENT : IO_NO_INCREMENT) );
 
         IrpContext->Irp = NULL;
-    }
+    } _SEH2_END;
 
     return Status;
 }

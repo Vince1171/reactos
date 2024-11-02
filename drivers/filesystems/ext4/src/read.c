@@ -86,7 +86,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
     PUCHAR              Buffer = NULL;
     EXT2_EXTENT         BlockArray;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -105,7 +105,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!(FcbOrVcb->Identifier.Type == EXT2VCB && (PVOID)FcbOrVcb == (PVOID)Vcb)) {
 
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
@@ -127,20 +127,20 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (Length == 0) {
             Irp->IoStatus.Information = 0;
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (FlagOn(IrpContext->MinorFunction, IRP_MN_DPC)) {
             ClearFlag(IrpContext->MinorFunction, IRP_MN_DPC);
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (ByteOffset.QuadPart >=
                 Vcb->PartitionInformation.PartitionLength.QuadPart  ) {
             Irp->IoStatus.Information = 0;
             Status = STATUS_END_OF_FILE;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (ByteOffset.QuadPart + Length > Vcb->Header.FileSize.QuadPart) {
@@ -157,7 +157,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                         &Vcb->MainResource,
                         IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
                 Status = STATUS_PENDING;
-                __leave;
+                _SEH2_LEAVE;
             }
             MainResourceAcquired = TRUE;
 
@@ -199,7 +199,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                 if (Buffer == NULL) {
                     DbgBreak();
                     Status = STATUS_INVALID_USER_BUFFER;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 if (!CcCopyRead(
@@ -210,7 +210,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                             Buffer,
                             &Irp->IoStatus )) {
                     Status = STATUS_PENDING;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 Status = Irp->IoStatus.Status;
@@ -225,7 +225,7 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                          IoWriteAccess );
 
             if (!NT_SUCCESS(Status)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             BlockArray.Irp = NULL;
@@ -241,11 +241,11 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
 
             Irp = IrpContext->Irp;
             if (!Irp) {
-                __leave;
+                _SEH2_LEAVE;
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (MainResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
@@ -292,19 +292,19 @@ Ext2ReadVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2FreeIrpContext(IrpContext);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
 
 
 #define SafeZeroMemory(AT,BYTE_COUNT) {                                 \
-    __try {                                                             \
+    _SEH2_TRY {                                                             \
         if (AT)                                                         \
             RtlZeroMemory((AT), (BYTE_COUNT));                          \
-    } __except(EXCEPTION_EXECUTE_HANDLER) {                             \
+    } _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER) {                             \
          Ext2RaiseStatus( IrpContext, STATUS_INVALID_USER_BUFFER );     \
-    }                                                                   \
+    } _SEH2_END;                                                                \
 }
 
 NTSTATUS
@@ -330,7 +330,7 @@ Ext2ReadInode (
         *BytesRead = 0;
     }
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferMcb(Mcb);
 
@@ -339,7 +339,7 @@ Ext2ReadInode (
 
         if ((Mcb->Identifier.Type != EXT2MCB) ||
                 (Mcb->Identifier.Size != sizeof(EXT2_MCB))) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Buffer == NULL && IrpContext != NULL)
@@ -352,7 +352,7 @@ Ext2ReadInode (
             PUCHAR Data = (PUCHAR) (&Mcb->Inode.i_block[0]);
             if (!Buffer) {
                 Status = STATUS_INSUFFICIENT_RESOURCES;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (Offset < EXT2_LINKLEN_IN_INODE) {
@@ -363,7 +363,7 @@ Ext2ReadInode (
             } else {
                 Status = STATUS_END_OF_FILE;
             }
-            __leave;
+            _SEH2_LEAVE;
         }
 
         //
@@ -387,13 +387,13 @@ Ext2ReadInode (
                  );
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Chain == NULL) {
             SafeZeroMemory((PCHAR)Buffer, Size);
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* for sparse file, we need zero the gaps */
@@ -450,14 +450,14 @@ Ext2ReadInode (
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (Chain) {
             Ext2DestroyExtentChain(Chain);
         }
 
         Ext2DerefMcb(Mcb);
-    }
+    } _SEH2_END;
 
     if (NT_SUCCESS(Status)) {
         if (BytesRead)
@@ -495,7 +495,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
 
     PUCHAR              Buffer;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -534,19 +534,19 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (IsSpecialFile(Fcb) || IsInodeSymLink(Fcb->Inode) ) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if ((IsSymLink(Fcb) && IsFileDeleted(Fcb->Mcb->Target)) ||
             IsFileDeleted(Fcb->Mcb)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Length == 0) {
             Irp->IoStatus.Information = 0;
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (ByteOffset.LowPart == FILE_USE_FILE_POINTER_POSITION &&
@@ -558,14 +558,14 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                         Length & (SECTOR_SIZE - 1))) {
             Status = STATUS_INVALID_PARAMETER;
             DbgBreak();
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (FlagOn(IrpContext->MinorFunction, IRP_MN_DPC)) {
             ClearFlag(IrpContext->MinorFunction, IRP_MN_DPC);
             Status = STATUS_PENDING;
             DbgBreak();
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ReturnedLength = Length;
@@ -576,7 +576,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                         &Fcb->PagingIoResource,
                         IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
                 Status = STATUS_PENDING;
-                __leave;
+                _SEH2_LEAVE;
             }
             PagingIoResourceAcquired = TRUE;
 
@@ -588,7 +588,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                             &Fcb->MainResource,
                             IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
                     Status = STATUS_PENDING;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
                 MainResourceAcquired = TRUE;
 
@@ -597,7 +597,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                               Length,
                              &Irp->IoStatus );
                 if (!NT_SUCCESS(Irp->IoStatus.Status))
-                    __leave;
+                    _SEH2_LEAVE;
                 ClearLongFlag(Fcb->Flags, FCB_FILE_MODIFIED);
 
                 if (ExAcquireResourceExclusiveLite(&(Fcb->PagingIoResource), TRUE)) {
@@ -616,7 +616,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                             &Fcb->MainResource,
                             IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
                     Status = STATUS_PENDING;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
                 MainResourceAcquired = TRUE;
             }
@@ -625,7 +625,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                         &Fcb->FileLockAnchor,
                         Irp         )) {
                 Status = STATUS_FILE_LOCK_CONFLICT;
-                __leave;
+                _SEH2_LEAVE;
             }
         }
 
@@ -633,7 +633,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
             if (ByteOffset.QuadPart >= Fcb->Header.FileSize.QuadPart) {
                 Irp->IoStatus.Information = 0;
                 Status = STATUS_END_OF_FILE;
-                __leave;
+                _SEH2_LEAVE;
             }
             ReturnedLength = (ULONG)(Fcb->Header.FileSize.QuadPart - ByteOffset.QuadPart);
         }
@@ -649,7 +649,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
 
             if (Status != STATUS_SUCCESS) {
                 OpPostIrp = TRUE;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             //
@@ -662,7 +662,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
         if (!Nocache) {
 
             if (IsDirectory(Fcb)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (FileObject->PrivateCacheMap == NULL) {
@@ -693,7 +693,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                 if (Buffer == NULL) {
                     Status = STATUS_INVALID_USER_BUFFER;
                     DbgBreak();
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 if (!CcCopyRead(FileObject, &ByteOffset, ReturnedLength,
@@ -704,7 +704,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                                                       Buffer, &Irp->IoStatus)) {
                         Status = STATUS_PENDING;
                         DbgBreak();
-                        __leave;
+                        _SEH2_LEAVE;
                     }
                 }
                 Status = Irp->IoStatus.Status;
@@ -723,7 +723,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                     }
                     Irp->IoStatus.Information = ReturnedLength;
                     Status = STATUS_SUCCESS;
-                    __leave;
+                    _SEH2_LEAVE;
                 } else {
                     BytesRead = (ULONG)(Fcb->Header.ValidDataLength.QuadPart - ByteOffset.QuadPart);
                     if (SystemVA) {
@@ -738,7 +738,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                          IoReadAccess );
 
             if (!NT_SUCCESS(Status)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             Status = Ext2ReadInode(
@@ -754,13 +754,13 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
             /* we need re-queue this request in case STATUS_CANT_WAIT
                and fail it in other failure cases  */
             if (!NT_SUCCESS(Status)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             /* pended by low level device */
             if (Status == STATUS_PENDING) {
                 IrpContext->Irp = Irp = NULL;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             Irp = IrpContext->Irp;
@@ -774,7 +774,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
 
         Irp->IoStatus.Information = ReturnedLength;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (Irp) {
             if (PagingIoResourceAcquired) {
@@ -821,7 +821,7 @@ Ext2ReadFile(IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2FreeIrpContext(IrpContext);
             }
         }
-    }
+    } _SEH2_END;
 
     DEBUG(DL_IO, ("Ext2ReadFile: %wZ fetch at Off=%I64xh Len=%xh Paging=%xh Nocache=%xh Returned=%xh Status=%xh\n",
                   &Fcb->Mcb->ShortName, ByteOffset.QuadPart, Length, PagingIo, Nocache, ReturnedLength, Status));
@@ -836,7 +836,7 @@ Ext2ReadComplete (IN PEXT2_IRP_CONTEXT IrpContext)
     PFILE_OBJECT    FileObject;
     PIRP            Irp;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -849,12 +849,12 @@ Ext2ReadComplete (IN PEXT2_IRP_CONTEXT IrpContext)
         Irp->MdlAddress = NULL;
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -875,7 +875,7 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
     ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
            (IrpContext->Identifier.Size == sizeof(EXT2_IRP_CONTEXT)));
 
-    __try {
+    _SEH2_TRY {
 
         if (FlagOn(IrpContext->MinorFunction, IRP_MN_COMPLETE)) {
 
@@ -889,7 +889,7 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
             if (IsExt2FsDevice(DeviceObject)) {
                 Status = STATUS_INVALID_DEVICE_REQUEST;
                 bCompleteRequest = TRUE;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -898,7 +898,7 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
                 Status = STATUS_INVALID_DEVICE_REQUEST;
                 bCompleteRequest = TRUE;
 
-                __leave;
+                _SEH2_LEAVE;
             }
 
             FileObject = IrpContext->FileObject;
@@ -909,7 +909,7 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
 #ifdef __REACTOS__
                 bCompleteRequest = TRUE;
 #endif
-                __leave;
+                _SEH2_LEAVE;
             }
 
             FcbOrVcb = (PEXT2_FCBVCB) FileObject->FsContext;
@@ -924,7 +924,7 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
                 if (IsFlagOn(Vcb->Flags, VCB_DISMOUNT_PENDING)) {
                     Status = STATUS_TOO_LATE;
                     bCompleteRequest = TRUE;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 Status = Ext2ReadFile(IrpContext);
@@ -938,11 +938,11 @@ Ext2Read (IN PEXT2_IRP_CONTEXT IrpContext)
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
         if (bCompleteRequest) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

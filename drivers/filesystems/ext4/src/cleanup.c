@@ -34,7 +34,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
     BOOLEAN         FcbPagingIoResourceAcquired = FALSE;
     BOOLEAN         SymLinkDelete = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -43,7 +43,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
         DeviceObject = IrpContext->DeviceObject;
         if (IsExt2FsDevice(DeviceObject))  {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Irp = IrpContext->Irp;
@@ -54,7 +54,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (!IsVcbInited(Vcb)) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         FileObject = IrpContext->FileObject;
@@ -62,14 +62,14 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!Fcb || (Fcb->Identifier.Type != EXT2VCB &&
                      Fcb->Identifier.Type != EXT2FCB)) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
         Mcb = Fcb->Mcb;
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
 
         if (IsFlagOn(FileObject->Flags, FO_CLEANUP_COMPLETE)) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Fcb->Identifier.Type == EXT2VCB) {
@@ -94,7 +94,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
             IoRemoveShareAccess(FileObject, &Vcb->ShareAccess);
 
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
@@ -112,12 +112,12 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
                     !IsVcbReadOnly(Vcb) ) {
                 Status = Ext2FlushFile(IrpContext, Fcb, Ccb);
             }
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Ccb == NULL) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (IsDirectory(Fcb)) {
@@ -234,14 +234,14 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
                     if (Fcb->Header.ValidDataLength.QuadPart < Fcb->Header.FileSize.QuadPart) {
                         if (!INODE_HAS_EXTENT(Fcb->Inode)) {
                         #if EXT2_PRE_ALLOCATION_SUPPORT
-                            __try {
+                            _SEH2_TRY {
                                 CcZeroData( FileObject,
                                            &Fcb->Header.ValidDataLength,
                                            &Fcb->Header.AllocationSize,
                                            TRUE);
-                            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                            } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
                                 DbgBreak();
-                            }
+                            } _SEH2_END;
                         #endif
                         }
                     }
@@ -369,7 +369,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
             SetFlag(FileObject->Flags, FO_CLEANUP_COMPLETE);
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbPagingIoResourceAcquired) {
             ExReleaseResourceLite(&Fcb->PagingIoResource);
@@ -391,7 +391,7 @@ Ext2Cleanup (IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

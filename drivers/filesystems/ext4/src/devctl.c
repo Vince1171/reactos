@@ -76,7 +76,7 @@ Ext2DeviceControlNormal (IN PEXT2_IRP_CONTEXT IrpContext)
 
     PDEVICE_OBJECT  TargetDeviceObject;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
 
@@ -89,7 +89,7 @@ Ext2DeviceControlNormal (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (IsExt2FsDevice(DeviceObject))  {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Irp = IrpContext->Irp;
@@ -100,7 +100,7 @@ Ext2DeviceControlNormal (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!((Vcb) && (Vcb->Identifier.Type == EXT2VCB) &&
                 (Vcb->Identifier.Size == sizeof(EXT2_VCB)))) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         TargetDeviceObject = Vcb->TargetDeviceObject;
@@ -124,7 +124,7 @@ Ext2DeviceControlNormal (IN PEXT2_IRP_CONTEXT IrpContext)
 
         Status = IoCallDriver(TargetDeviceObject, Irp);
 
-    } __finally  {
+    } _SEH2_FINALLY  {
 
         if (!IrpContext->ExceptionInProgress) {
             if (IrpContext) {
@@ -135,7 +135,7 @@ Ext2DeviceControlNormal (IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -150,7 +150,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
     NTSTATUS        Status = STATUS_UNSUCCESSFUL;
     BOOLEAN         GlobalDataResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
 
@@ -161,7 +161,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ExAcquireResourceExclusiveLite(
@@ -175,7 +175,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
 
             Status = STATUS_ACCESS_DENIED;
 
-            __leave;
+            _SEH2_LEAVE;
         }
 
         {
@@ -205,7 +205,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
 
             Status = STATUS_ACCESS_DENIED;
 
-            __leave;
+            _SEH2_LEAVE;
         }
 
         IoUnregisterFileSystem(Ext2Global->DiskdevObject);
@@ -216,7 +216,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
 
         DEBUG(DL_INF, ( "Ext2PrepareToUnload: Driver is ready to unload.\n"));
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalDataResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
@@ -225,7 +225,7 @@ Ext2PrepareToUnload (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -250,11 +250,11 @@ Ext2ProcessGlobalProperty(
     NTSTATUS        Status = STATUS_SUCCESS;
     BOOLEAN         GlobalDataResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         if (Length < 8 || !IsFlagOn(Property->Flags, EXT2_FLAG_VP_SET_GLOBAL)) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* query Ext2Fsd's version and built date/time*/
@@ -264,7 +264,7 @@ Ext2ProcessGlobalProperty(
 
             if (Length < sizeof(EXT2_VOLUME_PROPERTY_VERSION)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             RtlZeroMemory(&PVPV->Date[0],   0x20);
@@ -273,28 +273,28 @@ Ext2ProcessGlobalProperty(
             strncpy(&PVPV->Version[0], gVersion, 0x1B);
             strncpy(&PVPV->Date[0], gDate, 0x1F);
             strncpy(&PVPV->Time[0], gTime, 0x1F);
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* must be property query/set commands */
         if (Property->Command == APP_CMD_SET_PROPERTY) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else if (Property->Command == APP_CMD_SET_PROPERTY2) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY2)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else if (Property->Command == APP_CMD_SET_PROPERTY3) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY3)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ExAcquireResourceExclusiveLite(&Ext2Global->Resource, TRUE);
@@ -353,12 +353,12 @@ Ext2ProcessGlobalProperty(
             break;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalDataResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -377,7 +377,7 @@ Ext2ProcessVolumeProperty(
     NTSTATUS Status = STATUS_SUCCESS;
     BOOLEAN VcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(&Vcb->MainResource, TRUE);
         VcbResourceAcquired = TRUE;
@@ -386,19 +386,19 @@ Ext2ProcessVolumeProperty(
             Property->Command == APP_CMD_QUERY_PROPERTY) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else if (Property->Command == APP_CMD_SET_PROPERTY2 ||
                    Property->Command == APP_CMD_QUERY_PROPERTY2) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY2)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else if (Property->Command == APP_CMD_SET_PROPERTY3 ||
                    Property->Command == APP_CMD_QUERY_PROPERTY3) {
             if (Length < sizeof(EXT2_VOLUME_PROPERTY3)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
         }
 
@@ -561,12 +561,12 @@ Ext2ProcessVolumeProperty(
             break;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (VcbResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -582,7 +582,7 @@ Ext2ProcessUserProperty(
     PEXT2_VCB   Vcb = NULL;
     PDEVICE_OBJECT  DeviceObject = NULL;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -590,7 +590,7 @@ Ext2ProcessUserProperty(
 
         if (Property->Magic != EXT2_VOLUME_PROPERTY_MAGIC) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         DeviceObject = IrpContext->DeviceObject;
@@ -601,7 +601,7 @@ Ext2ProcessUserProperty(
             if (!((Vcb) && (Vcb->Identifier.Type == EXT2VCB) &&
                     (Vcb->Identifier.Size == sizeof(EXT2_VCB)))) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
             Status = Ext2ProcessVolumeProperty(Vcb, Property, Length);
         }
@@ -610,12 +610,12 @@ Ext2ProcessUserProperty(
             IrpContext->Irp->IoStatus.Information = Length;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -635,7 +635,7 @@ Ex2ProcessUserPerfStat(
     BOOLEAN     GlobalDataResourceAcquired = FALSE;
     NTSTATUS    Status = STATUS_SUCCESS;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -646,18 +646,18 @@ Ex2ProcessUserPerfStat(
 
             if (QueryPerf->Magic != EXT2_QUERY_PERFSTAT_MAGIC) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (QueryPerf->Command != IOCTL_APP_QUERY_PERFSTAT) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (Length != EXT2_QUERY_PERFSTAT_SZV1 &&
                 Length != EXT2_QUERY_PERFSTAT_SZV2) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
 
             ExAcquireResourceSharedLite(&Ext2Global->Resource, TRUE);
@@ -681,14 +681,14 @@ Ex2ProcessUserPerfStat(
 
         } else {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (NT_SUCCESS(Status)) {
             IrpContext->Irp->IoStatus.Information = Length;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalDataResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
@@ -697,7 +697,7 @@ Ex2ProcessUserPerfStat(
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -716,7 +716,7 @@ Ex2ProcessMountPoint(
 
     PDEVICE_OBJECT  DeviceObject = NULL;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -725,13 +725,13 @@ Ex2ProcessMountPoint(
         DeviceObject = IrpContext->DeviceObject;
         if (!IsExt2FsDevice(DeviceObject)) {
             status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Length != sizeof(EXT2_MOUNT_POINT) ||
             MountPoint->Magic != EXT2_APP_MOUNTPOINT_MAGIC) {
             status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         RtlInitUnicodeString(&Link, Buffer);
@@ -752,12 +752,12 @@ Ex2ProcessMountPoint(
             status = STATUS_INVALID_PARAMETER;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext, status);
         }
-    }
+    } _SEH2_END;
 
     return status;
 }

@@ -95,26 +95,26 @@ Ext2LockVcb (IN PEXT2_VCB    Vcb,
 {
     NTSTATUS Status = STATUS_SUCCESS;
 
-    __try {
+    _SEH2_TRY {
 
         if (FlagOn(Vcb->Flags, VCB_VOLUME_LOCKED)) {
             DEBUG(DL_INF, ( "Ext2LockVolume: Volume is already locked.\n"));
             Status = STATUS_ACCESS_DENIED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Vcb->OpenHandleCount > (ULONG)(FileObject ? 1 : 0)) {
             DEBUG(DL_INF, ( "Ext2LockVcb: There are still opened files.\n"));
 
             Status = STATUS_ACCESS_DENIED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!Ext2IsHandleCountZero(Vcb)) {
             DEBUG(DL_INF, ( "Ext2LockVcb: Thare are still opened files.\n"));
 
             Status = STATUS_ACCESS_DENIED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         SetLongFlag(Vcb->Flags, VCB_VOLUME_LOCKED);
@@ -123,9 +123,9 @@ Ext2LockVcb (IN PEXT2_VCB    Vcb,
 
         DEBUG(DL_INF, ( "Ext2LockVcb: Volume locked.\n"));
 
-    } __finally {
+    } _SEH2_FINALLY {
         // Nothing
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -139,7 +139,7 @@ Ext2LockVolume (IN PEXT2_IRP_CONTEXT IrpContext)
     NTSTATUS        Status;
     BOOLEAN VcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
 
@@ -155,7 +155,7 @@ Ext2LockVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -186,7 +186,7 @@ Ext2LockVolume (IN PEXT2_IRP_CONTEXT IrpContext)
 
         Status = Ext2LockVcb(Vcb, IrpSp->FileObject);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (VcbResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
@@ -195,7 +195,7 @@ Ext2LockVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -206,17 +206,17 @@ Ext2UnlockVcb ( IN PEXT2_VCB    Vcb,
 {
     NTSTATUS        Status;
 
-    __try {
+    _SEH2_TRY {
 
         if (FileObject && FileObject->FsContext != Vcb) {
             Status = STATUS_NOT_LOCKED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!FlagOn(Vcb->Flags, VCB_VOLUME_LOCKED)) {
             DEBUG(DL_ERR, ( ": Ext2UnlockVcb: Volume is not locked.\n"));
             Status = STATUS_NOT_LOCKED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Vcb->LockFile == FileObject) {
@@ -228,9 +228,9 @@ Ext2UnlockVcb ( IN PEXT2_VCB    Vcb,
             Status = STATUS_NOT_LOCKED;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
         // Nothing
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -246,7 +246,7 @@ Ext2UnlockVolume (
     NTSTATUS        Status;
     BOOLEAN         VcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -260,7 +260,7 @@ Ext2UnlockVolume (
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -275,7 +275,7 @@ Ext2UnlockVolume (
 
         Status = Ext2UnlockVcb(Vcb, IrpSp->FileObject);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (VcbResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
@@ -284,7 +284,7 @@ Ext2UnlockVolume (
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -309,19 +309,19 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
 
     LUID Privilege = {SE_TCB_PRIVILEGE, 0};
 
-    __try {
+    _SEH2_TRY {
 
         Irp   = IrpContext->Irp;
         IrpSp = IoGetCurrentIrpStackLocation(Irp);
 
         if (!IsExt2FsDevice(IrpSp->DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!SeSinglePrivilegeCheck(Privilege, Irp->RequestorMode)) {
             Status = STATUS_PRIVILEGE_NOT_HELD;
-            __leave;
+            _SEH2_LEAVE;
         }
 
 #ifndef _GNU_NTIFS_
@@ -335,7 +335,7 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
         if (IoIs32bitProcess(Irp)) {
             if (InputLength != sizeof(UINT32)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
             Handle = (HANDLE) LongToHandle( (*(PUINT32)Irp->AssociatedIrp.SystemBuffer) );
         } else
@@ -343,7 +343,7 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
         {
             if (InputLength != sizeof(HANDLE)) {
                 Status = STATUS_INVALID_PARAMETER;
-                __leave;
+                _SEH2_LEAVE;
             }
             Handle = *(PHANDLE)Irp->AssociatedIrp.SystemBuffer;
         }
@@ -356,7 +356,7 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
                                             NULL );
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         } else {
             DeviceObject = FileObject->DeviceObject;
             ObDereferenceObject(FileObject);
@@ -385,7 +385,7 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
@@ -394,7 +394,7 @@ Ext2InvalidateVolumes ( IN PEXT2_IRP_CONTEXT IrpContext )
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -469,7 +469,7 @@ Ext2OplockRequest (
 
     ASSERT(IrpContext);
 
-    __try {
+    _SEH2_TRY {
 
         Irp = IrpContext->Irp;
         ASSERT(Irp);
@@ -488,7 +488,7 @@ Ext2OplockRequest (
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -510,7 +510,7 @@ Ext2OplockRequest (
 
         if (Fcb == NULL || Fcb->Identifier.Type == EXT2VCB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
@@ -518,13 +518,13 @@ Ext2OplockRequest (
 
         if (IsFlagOn(Fcb->Mcb->Flags, MCB_FILE_DELETED)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
         if (Ccb == NULL) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Ccb->Identifier.Type == EXT2CCB) &&
@@ -590,7 +590,7 @@ Ext2OplockRequest (
         Fcb->Header.IsFastIoPossible = Ext2IsFastIoPossible(Fcb);
         IrpContext->Irp = NULL;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -603,7 +603,7 @@ Ext2OplockRequest (
         if (!AbnormalTermination()) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -618,7 +618,7 @@ Ext2IsVolumeDirty (
     PEXTENDED_IO_STACK_LOCATION IrpSp;
     PULONG VolumeState;
 
-    __try {
+    _SEH2_TRY {
 
         Irp = IrpContext->Irp;
         IrpSp = (PEXTENDED_IO_STACK_LOCATION)IoGetCurrentIrpStackLocation(Irp);
@@ -639,22 +639,22 @@ Ext2IsVolumeDirty (
         } else {
 
             status = STATUS_INVALID_USER_BUFFER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (IrpSp->Parameters.FileSystemControl.OutputBufferLength < sizeof(ULONG)) {
             status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         *VolumeState = 0;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  status);
         }
-    }
+    } _SEH2_END;
 
     return status;
 }
@@ -680,7 +680,7 @@ Ext2QueryExtentMappings(
 
     NTSTATUS            Status = STATUS_SUCCESS;
 
-    __try {
+    _SEH2_TRY {
 
         /* now building all the request extents */
         while (Vbn < RequestVbn->QuadPart) {
@@ -702,7 +702,7 @@ Ext2QueryExtentMappings(
                          &Extent);
 
             if (!NT_SUCCESS(Status)) {
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (Chain) {
@@ -720,7 +720,7 @@ Ext2QueryExtentMappings(
 
             if (PartialRuns == NULL) {
                 Status = STATUS_INSUFFICIENT_RESOURCES;
-                __leave;
+                _SEH2_LEAVE;
             }
             RtlZeroMemory(  PartialRuns,
                             (Ext2CountExtents(Chain) + 2) *
@@ -746,7 +746,7 @@ Ext2QueryExtentMappings(
 
         *pMappedRuns = MappedRuns;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!NT_SUCCESS(Status) || Status == STATUS_PENDING) {
             if (MappedRuns) {
@@ -758,7 +758,7 @@ Ext2QueryExtentMappings(
         if (Chain) {
             Ext2DestroyExtentChain(Chain);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -789,7 +789,7 @@ Ext2QueryRetrievalPointers (
 
     BOOLEAN FcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         Irp = IrpContext->Irp;
@@ -812,7 +812,7 @@ Ext2QueryRetrievalPointers (
         /* This request is not allowed on the main device object */
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -827,20 +827,20 @@ Ext2QueryRetrievalPointers (
         /* check Fcb is valid or not */
         if (Fcb == NULL || Fcb->Identifier.Type == EXT2VCB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
                (Fcb->Identifier.Size == sizeof(EXT2_FCB)));
         if (IsFlagOn(Fcb->Mcb->Flags, MCB_FILE_DELETED)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
         if (Ccb == NULL) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Ccb->Identifier.Type == EXT2CCB) &&
@@ -852,13 +852,13 @@ Ext2QueryRetrievalPointers (
                 InputSize != sizeof(LARGE_INTEGER) ||
                 OutputSize != sizeof(PVOID)) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ExAcquireResourceExclusiveLite (
                     &Fcb->MainResource, Ext2CanIWait())) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         FcbResourceAcquired = TRUE;
 
@@ -870,7 +870,7 @@ Ext2QueryRetrievalPointers (
         /* request size beyonds whole file size */
         if (RequestVbn->QuadPart >= Fcb->Header.AllocationSize.QuadPart) {
             Status = STATUS_END_OF_FILE;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Status = Ext2QueryExtentMappings(
@@ -881,7 +881,7 @@ Ext2QueryRetrievalPointers (
                      pMappedRuns
                  );
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -894,7 +894,7 @@ Ext2QueryRetrievalPointers (
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -933,7 +933,7 @@ Ext2GetRetrievalPointers (
 
     BOOLEAN FcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         Irp = IrpContext->Irp;
@@ -954,7 +954,7 @@ Ext2GetRetrievalPointers (
         /* This request is not allowed on the main device object */
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -969,7 +969,7 @@ Ext2GetRetrievalPointers (
         /* check Fcb is valid or not */
         if (Fcb == NULL || Fcb->Identifier.Type == EXT2VCB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
@@ -977,13 +977,13 @@ Ext2GetRetrievalPointers (
 
         if (IsFlagOn(Fcb->Mcb->Flags, MCB_FILE_DELETED)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
         if (Ccb == NULL) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Ccb->Identifier.Type == EXT2CCB) &&
@@ -992,13 +992,13 @@ Ext2GetRetrievalPointers (
         if (InputSize  < sizeof(STARTING_VCN_INPUT_BUFFER) ||
                 OutputSize < sizeof(RETRIEVAL_POINTERS_BUFFER) ) {
             Status = STATUS_BUFFER_TOO_SMALL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ExAcquireResourceExclusiveLite (
                     &Fcb->MainResource, Ext2CanIWait())) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         FcbResourceAcquired = TRUE;
 
@@ -1008,17 +1008,17 @@ Ext2GetRetrievalPointers (
 
         /* probe user buffer */
 
-        __try {
+        _SEH2_TRY {
             if (Irp->RequestorMode != KernelMode) {
                 ProbeForRead (SVIB, InputSize,  sizeof(UCHAR));
                 ProbeForWrite(RPSB, OutputSize, sizeof(UCHAR));
             }
-        } __except(EXCEPTION_EXECUTE_HANDLER) {
+        } _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
             Status = STATUS_INVALID_USER_BUFFER;
-        }
+        } _SEH2_END;
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         UsedSize = FIELD_OFFSET(RETRIEVAL_POINTERS_BUFFER, Extents[0]);
@@ -1029,7 +1029,7 @@ Ext2GetRetrievalPointers (
         Vbn = (SVIB->StartingVcn.QuadPart << BLOCK_BITS);
         if (Vbn >= Fcb->Header.AllocationSize.QuadPart ) {
             Status = STATUS_END_OF_FILE;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* now building all the request extents */
@@ -1053,7 +1053,7 @@ Ext2GetRetrievalPointers (
 
             if (!NT_SUCCESS(Status)) {
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             /* fill user buffer of RETRIEVAL_POINTERS_BUFFER */
@@ -1074,7 +1074,7 @@ Ext2GetRetrievalPointers (
                 }
                 if (UsedSize + sizeof(RETRIEVAL_POINTERS_BUFFER) > OutputSize) {
                     Status = STATUS_BUFFER_OVERFLOW;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
                 UsedSize += sizeof(LARGE_INTEGER) * 2;
                 Irp->IoStatus.Information = (ULONG_PTR)UsedSize;
@@ -1126,7 +1126,7 @@ exit_to_get_rps:
         }
 #endif
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -1143,7 +1143,7 @@ exit_to_get_rps:
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -1172,7 +1172,7 @@ Ext2GetRetrievalPointerBase (
 
     BOOLEAN FcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext);
         Irp = IrpContext->Irp;
@@ -1192,7 +1192,7 @@ Ext2GetRetrievalPointerBase (
         /* This request is not allowed on the main device object */
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -1207,7 +1207,7 @@ Ext2GetRetrievalPointerBase (
         /* check Fcb is valid or not */
         if (Fcb == NULL || Fcb->Identifier.Type == EXT2VCB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Fcb->Identifier.Type == EXT2FCB) &&
@@ -1215,13 +1215,13 @@ Ext2GetRetrievalPointerBase (
 
         if (IsFlagOn(Fcb->Mcb->Flags, MCB_FILE_DELETED)) {
             Status = STATUS_FILE_DELETED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ccb = (PEXT2_CCB) FileObject->FsContext2;
         if (Ccb == NULL) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT((Ccb->Identifier.Type == EXT2CCB) &&
@@ -1229,13 +1229,13 @@ Ext2GetRetrievalPointerBase (
 
         if (OutputSize < sizeof(LARGE_INTEGER)) {
             Status = STATUS_BUFFER_TOO_SMALL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ExAcquireResourceExclusiveLite (
                     &Fcb->MainResource, Ext2CanIWait())) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         FcbResourceAcquired = TRUE;
 
@@ -1243,18 +1243,18 @@ Ext2GetRetrievalPointerBase (
 
         /* probe user buffer */
 
-        __try {
+        _SEH2_TRY {
             if (Irp->RequestorMode != KernelMode) {
                 ProbeForWrite(FileAreaOffset, OutputSize, sizeof(UCHAR));
             }
 
-        } __except(EXCEPTION_EXECUTE_HANDLER) {
+        } _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
 
             Status = STATUS_INVALID_USER_BUFFER;
-        }
+        } _SEH2_END;
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         DEBUG(DL_DBG, ("Ext2GetRetrievalPointerBase: FileAreaOffset is 0.\n"));
@@ -1263,7 +1263,7 @@ Ext2GetRetrievalPointerBase (
 
         Irp->IoStatus.Information = sizeof(LARGE_INTEGER);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -1276,7 +1276,7 @@ Ext2GetRetrievalPointerBase (
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -1410,12 +1410,12 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
     Irp = IrpContext->Irp;
     IrpSp = IoGetCurrentIrpStackLocation(Irp);
     
-    __try {
+    _SEH2_TRY {
 
         if (!Mcb || !IsInodeSymLink(&Mcb->Inode) ||
             !IsFlagOn(Ccb->Flags, CCB_OPEN_REPARSE_POINT)) {
             Status = STATUS_NOT_A_REPARSE_POINT;
-            __leave;
+            _SEH2_LEAVE;
         }
         
         OutputBuffer  = (PVOID)Irp->AssociatedIrp.SystemBuffer;
@@ -1424,17 +1424,17 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         RDB = (PREPARSE_DATA_BUFFER)OutputBuffer;
         if (!RDB) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         if (OutputBufferLength < sizeof(REPARSE_DATA_BUFFER)) {
             Status = STATUS_BUFFER_OVERFLOW;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         OemNameLength = (ULONG)Mcb->Inode.i_size;
         if (OemNameLength > USHRT_MAX) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         OemName.Length = (USHORT)OemNameLength;
         OemName.MaximumLength = OemNameLength + 1;
@@ -1443,7 +1443,7 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                                           'NL2E');
         if (!OemNameBuffer) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Status = Ext2ReadSymlink(IrpContext,
@@ -1470,7 +1470,7 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         Irp->IoStatus.Information = FIELD_OFFSET(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer) + 2 * UniName.Length;
         if (UniName.MaximumLength < 2*UniName.Length) {
             Status = STATUS_BUFFER_TOO_SMALL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ext2InitializeReparseData(RDB, UniName.Length);
@@ -1486,7 +1486,7 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
         
         if (OemNameBuffer) {
             Ext2FreePool(OemNameBuffer, 'NL2E');
@@ -1499,7 +1499,7 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                 Ext2CompleteIrpContext(IrpContext, Status);
             }
         }
-    }
+    } _SEH2_END;
     
     return Status;
 }
@@ -1590,7 +1590,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
     BOOLEAN             MainResourceAcquired = FALSE;
     BOOLEAN             FcbLockAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         Ccb = IrpContext->Ccb;
         ASSERT(Ccb != NULL);
@@ -1616,7 +1616,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         }
 
         if (!Mcb)
-            __leave;
+            _SEH2_LEAVE;
 
         if (FcbLockAcquired) {
             ExReleaseResourceLite(&Vcb->FcbLock);
@@ -1627,7 +1627,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                     &Fcb->MainResource,
                     IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         MainResourceAcquired = TRUE;
         
@@ -1637,7 +1637,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         RDB = (PREPARSE_DATA_BUFFER)InputBuffer;
         Status = Ext2InspectReparseData(RDB, InputBufferLength);
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         UniName.Length = RDB->SymbolicLinkReparseBuffer.SubstituteNameLength;
@@ -1649,7 +1649,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         OemNameLength = Ext2UnicodeToOEMSize(Vcb, &UniName);
         if (OemNameLength > USHRT_MAX) {
             Status = STATUS_INVALID_PARAMETER;
-            __leave;
+            _SEH2_LEAVE;
         }
         OemName.Length = (USHORT)OemNameLength;
         OemName.MaximumLength = OemNameLength + 1;
@@ -1658,7 +1658,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                                           'NL2E');
         if (!OemNameBuffer) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ext2UnicodeToOEM(Vcb, &OemName, &UniName);
@@ -1696,7 +1696,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                             S_IFLNK | S_IRWXUGO);
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbLockAcquired) {
             ExReleaseResourceLite(&Vcb->FcbLock);
@@ -1731,7 +1731,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         if (ParentDcb) {
             Ext2ReleaseFcb(ParentDcb);
         }
-    }
+    } _SEH2_END;
     
     return Status;
 }
@@ -1789,7 +1789,7 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
     BOOLEAN             MainResourceAcquired = FALSE;
     
 
-    __try {
+    _SEH2_TRY {
 
         Ccb = IrpContext->Ccb;
         ASSERT(Ccb != NULL);
@@ -1815,7 +1815,7 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!Mcb || !IsInodeSymLink(&Mcb->Inode) ||
             !IsFlagOn(Ccb->Flags, CCB_OPEN_REPARSE_POINT)) {
             Status = STATUS_NOT_A_REPARSE_POINT;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Fcb = Ext2AllocateFcb (Vcb, Mcb);
@@ -1823,7 +1823,7 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
             Ext2ReferXcb(&Fcb->ReferenceCount);
         } else {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (FcbLockAcquired) {
@@ -1835,19 +1835,19 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                     &Fcb->MainResource,
                     IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT) )) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         MainResourceAcquired = TRUE;
 
         Status = Ext2TruncateSymlink(IrpContext, Vcb, Mcb, 0);
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* inode is to be removed */
         SetFlag(Ccb->Flags, CCB_DELETE_ON_CLOSE);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbLockAcquired) {
             ExReleaseResourceLite(&Vcb->FcbLock);
@@ -1882,7 +1882,7 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
         if (Fcb) {
             Ext2ReleaseFcb(Fcb);
         }
-    }
+    } _SEH2_END;
     
     return Status;
 }
@@ -2051,7 +2051,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
     DISK_GEOMETRY               DiskGeometry;
     LARGE_INTEGER               SysTime, LinuxTime;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -2070,12 +2070,12 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (!IsExt2FsDevice(MainDeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (IsFlagOn(Ext2Global->Flags, EXT2_UNLOAD_PENDING)) {
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
 #if 0
@@ -2083,7 +2083,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                 *((PULONG)IrpContext->RealDevice->DeviceExtension) == 'DSSA') {
         } else {
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 #endif
 
@@ -2102,7 +2102,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                      &dwBytes );
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Status = IoCreateDevice(
@@ -2115,7 +2115,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
                      &VolumeDeviceObject );
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
         INC_MEM_COUNT(PS_VCB, VolumeDeviceObject, sizeof(EXT2_VCB));
 
@@ -2163,7 +2163,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!NT_SUCCESS(Status)) {
             Vcb = NULL;
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
         ASSERT (NULL != Ext2Sb);
 
@@ -2173,7 +2173,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         } else  {
             Status = STATUS_UNRECOGNIZED_VOLUME;
             Vcb = NULL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         DEBUG(DL_DBG, ("Ext2MountVolume: DevObject=%p Vcb=%p\n", VolumeDeviceObject, Vcb));
@@ -2237,7 +2237,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
             Vcb = NULL;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalDataResourceAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
@@ -2267,7 +2267,7 @@ Ext2MountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2285,7 +2285,7 @@ Ext2VerifyVcb (IN PEXT2_IRP_CONTEXT IrpContext,
     PIRP                    Irp;
     PEXTENDED_IO_STACK_LOCATION      IrpSp;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
 
@@ -2366,9 +2366,9 @@ Ext2VerifyVcb (IN PEXT2_IRP_CONTEXT IrpContext,
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
-    }
+    } _SEH2_END;
 
 }
 
@@ -2384,7 +2384,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
     ULONG                   ChangeCount = 0;
     ULONG                   dwBytes;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -2396,7 +2396,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -2411,12 +2411,12 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (!FlagOn(Vcb->TargetDeviceObject->Flags, DO_VERIFY_VOLUME)) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!IsMounted(Vcb)) {
             Status = STATUS_WRONG_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         dwBytes = sizeof(ULONG);
@@ -2430,7 +2430,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (!NT_SUCCESS(Status)) {
             Status = STATUS_WRONG_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         } else {
             Vcb->ChangeCount = ChangeCount;
         }
@@ -2440,7 +2440,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         Status = Ext2LoadSuper(Vcb, TRUE, &ext2_sb);
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT(NULL != ext2_sb);
@@ -2469,7 +2469,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
             DEBUG(DL_INF, ( "Ext2VerifyVolume: Volume verify failed.\n"));
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (ext2_sb)
             Ext2FreePool(ext2_sb, EXT2_SB_MAGIC);
@@ -2481,7 +2481,7 @@ Ext2VerifyVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2519,7 +2519,7 @@ Ext2DismountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
     PEXT2_VCB       Vcb = NULL;
     BOOLEAN         VcbResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
 
@@ -2533,7 +2533,7 @@ Ext2DismountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         //
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_INVALID_DEVICE_REQUEST;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -2553,7 +2553,7 @@ Ext2DismountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if ( IsFlagOn(Vcb->Flags, VCB_DISMOUNT_PENDING)) {
             Status = STATUS_VOLUME_DISMOUNTED;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Ext2FlushFiles(IrpContext, Vcb, FALSE);
@@ -2568,7 +2568,7 @@ Ext2DismountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         DEBUG(DL_INF, ( "Ext2Dismount: Volume dismount pending.\n"));
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (VcbResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
@@ -2577,7 +2577,7 @@ Ext2DismountVolume (IN PEXT2_IRP_CONTEXT IrpContext)
         if (!IrpContext->ExceptionInProgress) {
             Ext2CompleteIrpContext(IrpContext,  Status);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2704,7 +2704,7 @@ Ext2PurgeVolume (IN PEXT2_VCB Vcb,
     BOOLEAN         FcbResourceAcquired = FALSE;
     BOOLEAN         gdResourceAcquired = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(Vcb != NULL);
         ASSERT((Vcb->Identifier.Type == EXT2VCB) &&
@@ -2782,7 +2782,7 @@ Ext2PurgeVolume (IN PEXT2_VCB Vcb,
 
         DEBUG(DL_INF, ( "Ext2PurgeVolume: Volume flushed and purged.\n"));
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (gdResourceAcquired) {
             ExReleaseResourceLite(&Vcb->sbi.s_gd_lock);
@@ -2795,7 +2795,7 @@ Ext2PurgeVolume (IN PEXT2_VCB Vcb,
         if (VcbResourceAcquired) {
             ExReleaseResourceLite(&Vcb->MainResource);
         }
-    }
+    } _SEH2_END;
 
     return STATUS_SUCCESS;
 }

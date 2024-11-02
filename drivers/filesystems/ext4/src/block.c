@@ -75,19 +75,19 @@ Ext2CreateMdl (
     if (Mdl == NULL) {
         Status = STATUS_INSUFFICIENT_RESOURCES;
     } else {
-        __try {
+        _SEH2_TRY {
             if (MmIsNonPagedSystemAddressValid(Buffer)) {
                 MmBuildMdlForNonPagedPool(Mdl);
             } else {
                 MmProbeAndLockPages(Mdl, KernelMode, op);
             }
             Status = STATUS_SUCCESS;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
             IoFreeMdl (Mdl);
             Mdl = NULL;
             DbgBreak();
             Status = STATUS_INVALID_USER_BUFFER;
-        }
+        } _SEH2_END;
     }
     return Mdl;
 }
@@ -126,18 +126,18 @@ Ext2LockUserBuffer (IN PIRP     Irp,
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    __try {
+    _SEH2_TRY {
 
         MmProbeAndLockPages(Irp->MdlAddress, Irp->RequestorMode, Operation);
         Status = STATUS_SUCCESS;
 
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
 
         DbgBreak();
         IoFreeMdl(Irp->MdlAddress);
         Irp->MdlAddress = NULL;
         Status = STATUS_INVALID_USER_BUFFER;
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -277,14 +277,14 @@ Ext2ReadWriteBlocks(
 
     ASSERT(MasterIrp);
 
-    __try {
+    _SEH2_TRY {
 
         pContext = Ext2AllocatePool(NonPagedPool, sizeof(EXT2_RW_CONTEXT), EXT2_RWC_MAGIC);
 
         if (!pContext) {
             DEBUG(DL_ERR, ( "Ex2ReadWriteBlocks: failed to allocate pContext.\n"));
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         INC_MEM_COUNT(PS_RW_CONTEXT, pContext, sizeof(EXT2_RW_CONTEXT));
@@ -354,7 +354,7 @@ Ext2ReadWriteBlocks(
 
                 if (!Irp) {
                     Status = STATUS_INSUFFICIENT_RESOURCES;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 Mdl = IoAllocateMdl( (PCHAR)MasterIrp->UserBuffer +
@@ -366,7 +366,7 @@ Ext2ReadWriteBlocks(
 
                 if (!Mdl)  {
                     Status = STATUS_INSUFFICIENT_RESOURCES;
-                    __leave;
+                    _SEH2_LEAVE;
                 }
 
                 IoBuildPartialMdl( MasterIrp->MdlAddress,
@@ -437,7 +437,7 @@ Ext2ReadWriteBlocks(
             bMasterCompleted = TRUE;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         for (Extent = Chain; Extent != NULL; Extent = Extent->Next)  {
             if (Extent->Irp != NULL ) {
@@ -471,7 +471,7 @@ Ext2ReadWriteBlocks(
                 }
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -496,13 +496,13 @@ Ext2ReadSync(
     ASSERT(Vcb->TargetDeviceObject != NULL);
     ASSERT(Buffer != NULL);
 
-    __try {
+    _SEH2_TRY {
 
         Event = Ext2AllocatePool(NonPagedPool, sizeof(KEVENT), 'EK2E');
 
         if (NULL == Event) {
             DEBUG(DL_ERR, ( "Ex2ReadSync: failed to allocate Event.\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
 
         INC_MEM_COUNT(PS_DISK_EVENT, Event, sizeof(KEVENT));
@@ -521,7 +521,7 @@ Ext2ReadSync(
 
         if (!Irp) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (bVerify) {
@@ -543,13 +543,13 @@ Ext2ReadSync(
             Status = IoStatus.Status;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (Event) {
             Ext2FreePool(Event, 'EK2E');
             DEC_MEM_COUNT(PS_DISK_EVENT, Event, sizeof(KEVENT));
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }

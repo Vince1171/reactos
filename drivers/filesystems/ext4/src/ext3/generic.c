@@ -173,7 +173,7 @@ Ext2LoadGroupBH(IN PEXT2_VCB Vcb)
     unsigned long i;
     BOOLEAN rc = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(&Vcb->sbi.s_gd_lock, TRUE);
         ASSERT (NULL != sbi->s_gd);
@@ -186,17 +186,17 @@ Ext2LoadGroupBH(IN PEXT2_VCB Vcb)
             if (!sbi->s_gd[i].bh) {
                 DEBUG(DL_ERR, ("Ext2LoadGroupBH: can't read group descriptor %d\n", i));
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
             sbi->s_gd[i].gd = (struct ext4_group_desc *)sbi->s_gd[i].bh->b_data;
         }
 
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         ExReleaseResourceLite(&Vcb->sbi.s_gd_lock);
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -210,7 +210,7 @@ Ext2LoadGroup(IN PEXT2_VCB Vcb)
     unsigned long i;
     BOOLEAN rc = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(&Vcb->sbi.s_gd_lock, TRUE);
 
@@ -220,7 +220,7 @@ Ext2LoadGroup(IN PEXT2_VCB Vcb)
         }
         if (sbi->s_gd == NULL) {
             DEBUG(DL_ERR, ("Ext2LoadGroup: not enough memory.\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (BLOCK_SIZE != EXT3_MIN_BLOCK_SIZE) {
@@ -231,31 +231,31 @@ Ext2LoadGroup(IN PEXT2_VCB Vcb)
             sbi->s_gd[i].block =  descriptor_loc(sb, sb_block, i);
             if (!sbi->s_gd[i].block) {
                 DEBUG(DL_ERR, ("Ext2LoadGroup: can't locate group descriptor %d\n", i));
-                __leave;
+                _SEH2_LEAVE;
             }
         }
 
         if (!Ext2LoadGroupBH(Vcb)) {
             DEBUG(DL_ERR, ("Ext2LoadGroup: Failed to load group descriptions !\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ext4_check_descriptors(sb)) {
             DbgBreak();
             DEBUG(DL_ERR, ("Ext2LoadGroup: group descriptors corrupted !\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
 
         SetFlag(Vcb->Flags, VCB_GD_LOADED);
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!rc)
             Ext2PutGroup(Vcb);
 
         ExReleaseResourceLite(&Vcb->sbi.s_gd_lock);
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -269,7 +269,7 @@ Ext2DropBH(IN PEXT2_VCB Vcb)
     if (!IsFlagOn(Vcb->Flags, VCB_INITIALIZED))
         return;
 
-    __try {
+    _SEH2_TRY {
 
         /* acquire bd lock to avoid bh creation */
         ExAcquireResourceExclusiveLite(&Vcb->bd.bd_bh_lock, TRUE);
@@ -289,9 +289,9 @@ Ext2DropBH(IN PEXT2_VCB Vcb)
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
         ExReleaseResourceLite(&Vcb->bd.bd_bh_lock);
-    }
+    } _SEH2_END;
 
     ClearFlag(Vcb->Flags, VCB_BEING_DROPPED);
 }
@@ -331,7 +331,7 @@ Ext2FlushVcb(IN PEXT2_VCB Vcb)
 
     ASSERT(ExIsResourceAcquiredExclusiveLite(&Vcb->MainResource));
 
-    __try {
+    _SEH2_TRY {
 
         /* acqurie gd block */
         ExAcquireResourceExclusiveLite(&Vcb->sbi.s_gd_lock, TRUE);
@@ -368,11 +368,11 @@ Ext2FlushVcb(IN PEXT2_VCB Vcb)
         o = Vcb->PartitionInformation.PartitionLength;
         Ext2FlushRange(Vcb, s, o);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         ExReleaseResourceLite(&Vcb->bd.bd_bh_lock);
         ExReleaseResourceLite(&Vcb->sbi.s_gd_lock);
-    }
+    } _SEH2_END;
 
 errorout:
     return STATUS_SUCCESS;
@@ -696,32 +696,32 @@ Ext2LoadBlock (IN PEXT2_VCB Vcb,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc = 0;
 
-    __try {
+    _SEH2_TRY {
 
         bh = sb_getblk(&Vcb->sb, (sector_t)Index);
 
         if (!bh) {
             DEBUG(DL_ERR, ("Ext2Loadblock: can't load block %u\n", Index));
             DbgBreak();
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!buffer_uptodate(bh)) {
             int err = bh_submit_read(bh);
 	        if (err < 0) {
 	            DEBUG(DL_ERR, ("Ext2LoadBlock: reading failed %d\n", err));
-		        __leave;
+		        _SEH2_LEAVE;
 	        }
         }
 
         RtlCopyMemory(Buffer, bh->b_data, BLOCK_SIZE);
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
-    }
+    } _SEH2_END;
 
     return rc; 
 }
@@ -735,14 +735,14 @@ Ext2SaveBlock ( IN PEXT2_IRP_CONTEXT    IrpContext,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc = 0;
 
-    __try {
+    _SEH2_TRY {
 
         bh = sb_getblk_zero(&Vcb->sb, (sector_t)Index);
 
         if (!bh) {
             DEBUG(DL_ERR, ("Ext2Saveblock: can't load block %u\n", Index));
             DbgBreak();
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!buffer_uptodate(bh)) {
@@ -752,11 +752,11 @@ Ext2SaveBlock ( IN PEXT2_IRP_CONTEXT    IrpContext,
         mark_buffer_dirty(bh);
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -771,7 +771,7 @@ Ext2LoadBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc;
 
-    __try {
+    _SEH2_TRY {
 
         while (size) {
 
@@ -788,22 +788,22 @@ Ext2LoadBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
             if (!bh) {
                 DEBUG(DL_ERR, ("Ext2SaveBuffer: can't load block %I64u\n", block));
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (!buffer_uptodate(bh)) {
 	            int err = bh_submit_read(bh);
 	            if (err < 0) {
 		            DEBUG(DL_ERR, ("Ext2SaveBuffer: bh_submit_read failed: %d\n", err));
-		            __leave;
+		            _SEH2_LEAVE;
 	            }
             }
 
-            __try {
+            _SEH2_TRY {
                 RtlCopyMemory(buf, bh->b_data + delta, len);
-            } __finally {
+            } _SEH2_FINALLY {
                 fini_bh(&bh);
-            }
+            } _SEH2_END;
 
             buf = (PUCHAR)buf + len;
             offset = offset + len;
@@ -812,12 +812,12 @@ Ext2LoadBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
 
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
 
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -832,7 +832,7 @@ Ext2ZeroBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc = 0;
 
-    __try {
+    _SEH2_TRY {
 
         while (size) {
 
@@ -854,27 +854,27 @@ Ext2ZeroBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
             if (!bh) {
                 DEBUG(DL_ERR, ("Ext2SaveBuffer: can't load block %I64u\n", block));
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (!buffer_uptodate(bh)) {
 	            int err = bh_submit_read(bh);
 	            if (err < 0) {
 		            DEBUG(DL_ERR, ("Ext2SaveBuffer: bh_submit_read failed: %d\n", err));
-		            __leave;
+		            _SEH2_LEAVE;
 	            }
             }
 
-            __try {
+            _SEH2_TRY {
                 if (delta == 0 && len >= BLOCK_SIZE) {
                     /* bh (cache) was already cleaned as zero */
                 } else {
                     RtlZeroMemory(bh->b_data + delta, len);
                 }
                 mark_buffer_dirty(bh);
-            } __finally {
+            } _SEH2_FINALLY {
                 fini_bh(&bh);
-            }
+            } _SEH2_END;
 
             offset = offset + len;
             size = size - len;
@@ -882,12 +882,12 @@ Ext2ZeroBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
 
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
 
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -964,7 +964,7 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
     struct buffer_head *bh = NULL;
     BOOLEAN             rc = 0;
 
-    __try {
+    _SEH2_TRY {
 
         while (size) {
 
@@ -986,23 +986,23 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
             if (!bh) {
                 DEBUG(DL_ERR, ("Ext2SaveBuffer: can't load block %I64u\n", block));
                 DbgBreak();
-                __leave;
+                _SEH2_LEAVE;
             }
 
             if (!buffer_uptodate(bh)) {
 	            int err = bh_submit_read(bh);
 	            if (err < 0) {
 		            DEBUG(DL_ERR, ("Ext2SaveBuffer: bh_submit_read failed: %d\n", err));
-		            __leave;
+		            _SEH2_LEAVE;
 	            }
             }
 
-            __try {
+            _SEH2_TRY {
                 RtlCopyMemory(bh->b_data + delta, buf, len);
                 mark_buffer_dirty(bh);
-            } __finally {
+            } _SEH2_FINALLY {
                 fini_bh(&bh);
-            }
+            } _SEH2_END;
 
             buf = (PUCHAR)buf + len;
             offset = offset + len;
@@ -1011,12 +1011,12 @@ Ext2SaveBuffer( IN PEXT2_IRP_CONTEXT    IrpContext,
 
         rc = TRUE;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (bh)
             fini_bh(&bh);
 
-    }
+    } _SEH2_END;
 
     return rc;
 }
@@ -1939,13 +1939,13 @@ Ext2AddEntry (
     ExAcquireResourceExclusiveLite(&Dcb->MainResource, TRUE);
     MainResourceAcquired = TRUE;
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferXcb(&Dcb->ReferenceCount);
         de = Ext2BuildEntry(Vcb, Dcb->Mcb, FileName);
         if (!de) {
             status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
         de->d_inode = Inode;
 
@@ -1969,7 +1969,7 @@ Ext2AddEntry (
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         Ext2DerefXcb(&Dcb->ReferenceCount);
 
@@ -1979,7 +1979,7 @@ Ext2AddEntry (
 
         if (de)
             Ext2FreeEntry(de);
-    }
+    } _SEH2_END;
 
     return status;
 }
@@ -2011,17 +2011,17 @@ Ext2SetFileType (
     ExAcquireResourceExclusiveLite(&Dcb->MainResource, TRUE);
     MainResourceAcquired = TRUE;
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferXcb(&Dcb->ReferenceCount);
 
         bh = ext3_find_entry(IrpContext, Mcb->de, &de);
         if (!bh)
-            __leave;
+            _SEH2_LEAVE;
 
         inode = &Mcb->Inode;
         if (le32_to_cpu(de->inode) != inode->i_ino)
-            __leave;
+            _SEH2_LEAVE;
 
         ext3_set_de_type(inode->i_sb, de, mode);
         mark_buffer_dirty(bh);
@@ -2040,7 +2040,7 @@ Ext2SetFileType (
 
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         Ext2DerefXcb(&Dcb->ReferenceCount);
 
@@ -2049,7 +2049,7 @@ Ext2SetFileType (
 
         if (bh)
             brelse(bh);
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2077,17 +2077,17 @@ Ext2RemoveEntry (
     ExAcquireResourceExclusiveLite(&Dcb->MainResource, TRUE);
     MainResourceAcquired = TRUE;
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferXcb(&Dcb->ReferenceCount);
 
         bh = ext3_find_entry(IrpContext, Mcb->de, &de);
         if (!bh)
-            __leave;
+            _SEH2_LEAVE;
 
         inode = &Mcb->Inode;
         if (le32_to_cpu(de->inode) != inode->i_ino)
-            __leave;
+            _SEH2_LEAVE;
 
         if (!inode->i_nlink) {
             ext3_warning (inode->i_sb, "ext3_unlink",
@@ -2098,7 +2098,7 @@ Ext2RemoveEntry (
         rc = ext3_delete_entry(IrpContext, dir, de, bh);
         if (rc) {
             Status = Ext2WinntError(rc);
-            __leave;
+            _SEH2_LEAVE;
         }
         /*
         	    if (!inode->i_nlink)
@@ -2118,7 +2118,7 @@ Ext2RemoveEntry (
 
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         Ext2DerefXcb(&Dcb->ReferenceCount);
 
@@ -2127,7 +2127,7 @@ Ext2RemoveEntry (
 
         if (bh)
             brelse(bh);
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2162,7 +2162,7 @@ Ext2SetParentEntry (
     MainResourceAcquired =
         ExAcquireResourceExclusiveLite(&Dcb->MainResource, TRUE);
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferXcb(&Dcb->ReferenceCount);
 
@@ -2175,7 +2175,7 @@ Ext2SetParentEntry (
         if (!pSelf) {
             DEBUG(DL_ERR, ( "Ex2SetParentEntry: failed to allocate pSelf.\n"));
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         dwBytes = 0;
@@ -2196,7 +2196,7 @@ Ext2SetParentEntry (
 
         if (!NT_SUCCESS(Status)) {
             DEBUG(DL_ERR, ( "Ext2SetParentEntry: failed to read directory.\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
 
         ASSERT(dwBytes == EXT2_DIR_REC_LEN(1) + EXT2_DIR_REC_LEN(2));
@@ -2225,7 +2225,7 @@ Ext2SetParentEntry (
             DbgBreak();
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (Ext2DerefXcb(&Dcb->ReferenceCount) == 0) {
             DEBUG(DL_ERR, ( "Ext2SetParentEntry: Dcb reference goes to ZERO.\n"));
@@ -2238,7 +2238,7 @@ Ext2SetParentEntry (
         if (pSelf) {
             Ext2FreePool(pSelf, EXT2_DENTRY_MAGIC);
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -2942,19 +2942,19 @@ struct ext4_group_desc * ext4_get_group_desc(struct super_block *sb,
         return NULL;
     }
 
-    __try {
+    _SEH2_TRY {
 
         group = block_group >> EXT4_DESC_PER_BLOCK_BITS(sb);
         offset = block_group & (EXT4_DESC_PER_BLOCK(sb) - 1);
 
         if (!sbi->s_gd) {
             if (!Ext2LoadGroup(vcb)) {
-                __leave;
+                _SEH2_LEAVE;
             }
         } else if ( !sbi->s_gd[group].block ||
                     !sbi->s_gd[group].bh) {
             if (!Ext2LoadGroupBH(vcb)) {
-                __leave;
+                _SEH2_LEAVE;
             }
         }
 
@@ -2964,9 +2964,9 @@ struct ext4_group_desc * ext4_get_group_desc(struct super_block *sb,
             atomic_inc(&sbi->s_gd[group].bh->b_count);
             *bh = sbi->s_gd[group].bh;
         }
-    } __finally {
+    } _SEH2_FINALLY {
         /* do cleanup */
-    }
+    } _SEH2_END;
 
     return desc;
 }

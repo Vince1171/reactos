@@ -36,7 +36,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
     BOOLEAN         FcbResourceAcquired = FALSE;
     BOOLEAN         FcbDerefDeferred = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT(IrpContext != NULL);
         ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
@@ -46,7 +46,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
         if (IsExt2FsDevice(DeviceObject)) {
             Status = STATUS_SUCCESS;
             Vcb = NULL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb = (PEXT2_VCB) DeviceObject->DeviceExtension;
@@ -66,7 +66,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
             Fcb = (PEXT2_FCB) FileObject->FsContext;
             if (!Fcb) {
                 Status = STATUS_SUCCESS;
-                __leave;
+                _SEH2_LEAVE;
             }
             ASSERT(Fcb != NULL);
             Ccb = (PEXT2_CCB) FileObject->FsContext2;
@@ -92,7 +92,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
                 DEBUG(DL_INF, ("Ext2Close: PENDING ... Vcb: %xh/%xh\n",
                                    Vcb->OpenHandleCount, Vcb->ReferenceCount));
                 Status = STATUS_PENDING;
-                __leave;
+                _SEH2_LEAVE;
             }
             VcbResourceAcquired = TRUE;
 
@@ -107,19 +107,19 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
             }
 
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if ( Fcb->Identifier.Type != EXT2FCB ||
              Fcb->Identifier.Size != sizeof(EXT2_FCB)) {
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (!ExAcquireResourceExclusiveLite(
                     &Fcb->MainResource,
                     TRUE )) {
             Status = STATUS_PENDING;
-            __leave;
+            _SEH2_LEAVE;
         }
         FcbResourceAcquired = TRUE;
 
@@ -129,7 +129,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
             Ccb->Identifier.Type != EXT2CCB ||
             Ccb->Identifier.Size != sizeof(EXT2_CCB)) {
             Status = STATUS_SUCCESS;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         DEBUG(DL_INF, ( "Ext2Close: Fcb = %p OpenHandleCount= %u ReferenceCount=%u NonCachedCount=%u %wZ\n",
@@ -157,7 +157,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
 
         Status = STATUS_SUCCESS;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (FcbResourceAcquired) {
             ExReleaseResourceLite(&Fcb->MainResource);
@@ -181,7 +181,7 @@ Ext2Close (IN PEXT2_IRP_CONTEXT IrpContext)
 
         if (FcbDerefDeferred)
             Ext2DerefXcb(&Fcb->ReferenceCount);
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -231,20 +231,20 @@ Ext2DeQueueCloseRequest (IN PVOID Context)
     ASSERT((IrpContext->Identifier.Type == EXT2ICX) &&
            (IrpContext->Identifier.Size == sizeof(EXT2_IRP_CONTEXT)));
 
-    __try {
+    _SEH2_TRY {
 
-        __try {
+        _SEH2_TRY {
 
             FsRtlEnterFileSystem();
             Ext2Close(IrpContext);
 
-        } __except (Ext2ExceptionFilter(IrpContext, GetExceptionInformation())) {
+        } _SEH2_EXCEPT (Ext2ExceptionFilter(IrpContext, _SEH2_GetExceptionInformation())) {
 
             Ext2ExceptionHandler(IrpContext);
-        }
+        } _SEH2_END;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         FsRtlExitFileSystem();
-    }
+    } _SEH2_END;
 }

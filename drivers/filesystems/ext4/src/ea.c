@@ -126,7 +126,7 @@ Ext2QueryEa (
 
 	PFILE_FULL_EA_INFORMATION FullEa, LastFullEa = NULL;
 
-	__try {
+	_SEH2_TRY {
 
 		Ccb = IrpContext->Ccb;
 		ASSERT(Ccb != NULL);
@@ -147,7 +147,7 @@ Ext2QueryEa (
 		UserBuffer = Ext2GetUserBuffer(Irp);
 		if (!UserBuffer) {
 			Status = STATUS_INSUFFICIENT_RESOURCES;
-			__leave;
+			_SEH2_LEAVE;
 		}
 		UserBufferLength = IrpSp->Parameters.QueryEa.Length;
 		RemainingUserBufferLength = UserBufferLength;
@@ -159,7 +159,7 @@ Ext2QueryEa (
 		IndexSpecified = BooleanFlagOn(IrpSp->Flags, SL_INDEX_SPECIFIED);
 
 		if (!Mcb)
-			__leave;
+			_SEH2_LEAVE;
 
 		//
 		// We do not allow multiple instance gaining EA access to the same file
@@ -168,14 +168,14 @@ Ext2QueryEa (
 			&Fcb->MainResource,
 			IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT))) {
 			Status = STATUS_PENDING;
-			__leave;
+			_SEH2_LEAVE;
 		}
 		MainResourceAcquired = TRUE;
 
 		Status = Ext2WinntError(ext4_fs_get_xattr_ref(IrpContext, Vcb, Fcb->Mcb, &xattr_ref));
 		if (!NT_SUCCESS(Status)) {
 			DbgPrint("ext4_fs_get_xattr_ref() failed!\n");
-			__leave;
+			_SEH2_LEAVE;
 		}
 
 		FullEa = (PFILE_FULL_EA_INFORMATION)UserBuffer;
@@ -232,7 +232,7 @@ Ext2QueryEa (
 				if (EaEntrySize > RemainingUserBufferLength) {
 
 					Status = i ? STATUS_BUFFER_OVERFLOW : STATUS_BUFFER_TOO_SMALL;
-					__leave;
+					_SEH2_LEAVE;
 				}
 				FullEa->NextEntryOffset = 0;
 				FullEa->Flags = 0;
@@ -347,7 +347,7 @@ Ext2QueryEa (
 
 		}
 	}
-	__finally {
+	_SEH2_FINALLY {
 
 		if (XattrRefAcquired) {
 			if (!NT_SUCCESS(Status)) {
@@ -380,7 +380,7 @@ Ext2QueryEa (
 				Ext2CompleteIrpContext(IrpContext, Status);
 			}
 		}
-	}
+	} _SEH2_END;
 
 	return Status;
 }
@@ -459,7 +459,7 @@ Ext2SetEa (
 
 	PFILE_FULL_EA_INFORMATION FullEa;
 
-	__try {
+	_SEH2_TRY {
 
 		Ccb = IrpContext->Ccb;
 		ASSERT(Ccb != NULL);
@@ -485,13 +485,13 @@ Ext2SetEa (
 			UserBufferLength,
 			(PULONG)&Irp->IoStatus.Information);
 		if (!NT_SUCCESS(Status))
-			__leave;
+			_SEH2_LEAVE;
 
 		ExAcquireResourceExclusiveLite(&Vcb->FcbLock, TRUE);
 		FcbLockAcquired = TRUE;
 
 		if (!Mcb)
-			__leave;
+			_SEH2_LEAVE;
 
 		//
 		// We do not allow multiple instance gaining EA access to the same file
@@ -500,14 +500,14 @@ Ext2SetEa (
 			&Fcb->MainResource,
 			IsFlagOn(IrpContext->Flags, IRP_CONTEXT_FLAG_WAIT))) {
 			Status = STATUS_PENDING;
-			__leave;
+			_SEH2_LEAVE;
 		}
 		MainResourceAcquired = TRUE;
 
 		Status = Ext2WinntError(ext4_fs_get_xattr_ref(IrpContext, Vcb, Fcb->Mcb, &xattr_ref));
 		if (!NT_SUCCESS(Status)) {
 			DbgPrint("ext4_fs_get_xattr_ref() failed!\n");
-			__leave;
+			_SEH2_LEAVE;
 		}
 
 		XattrRefAcquired = TRUE;
@@ -535,7 +535,7 @@ Ext2SetEa (
 			if (!Ext2IsEaNameValid(EaName)) {
 				Irp->IoStatus.Information = (PCHAR)FullEa - UserBuffer;
 				Status = STATUS_INVALID_EA_NAME;
-				__leave;
+				_SEH2_LEAVE;
 			}
 		}
 
@@ -560,10 +560,10 @@ Ext2SetEa (
 						&FullEa->EaName[0] + FullEa->EaNameLength + 1,
 						FullEa->EaValueLength));
 				if (!NT_SUCCESS(Status))
-					__leave;
+					_SEH2_LEAVE;
 
 		}
-	} __finally {
+	} _SEH2_FINALLY {
 
 		if (XattrRefAcquired) {
 			if (!NT_SUCCESS(Status)) {
@@ -599,6 +599,6 @@ Ext2SetEa (
 				Ext2CompleteIrpContext(IrpContext, Status);
 			}
 		}
-	}
+	}  _SEH2_END;
 	return Status;
 }

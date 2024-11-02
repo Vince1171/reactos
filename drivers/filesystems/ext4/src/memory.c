@@ -240,7 +240,7 @@ Ext2FreeFcb (IN PEXT2_FCB Fcb)
 {
     PEXT2_VCB   Vcb = Fcb->Vcb;
 
-    __try {
+    _SEH2_TRY {
 
         ASSERT((Fcb != NULL) && (Fcb->Identifier.Type == EXT2FCB) &&
                (Fcb->Identifier.Size == sizeof(EXT2_FCB)));
@@ -267,8 +267,8 @@ Ext2FreeFcb (IN PEXT2_FCB Fcb)
             }
         }
 
-    } __finally {
-    }
+    } _SEH2_FINALLY {
+    } _SEH2_END;
 }
 
 VOID
@@ -445,12 +445,12 @@ struct dentry *Ext2BuildEntry(PEXT2_VCB Vcb, PEXT2_MCB Dcb, PUNICODE_STRING File
     struct dentry  *de = NULL;
     NTSTATUS        Status = STATUS_INSUFFICIENT_RESOURCES;
 
-    __try {
+    _SEH2_TRY {
 
         de = Ext2AllocateEntry();
         if (!de) {
             DEBUG(DL_ERR, ("Ext2BuildEntry: failed to allocate dentry.\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
         de->d_sb = &Vcb->sb;
         if (Dcb)
@@ -460,24 +460,24 @@ struct dentry *Ext2BuildEntry(PEXT2_VCB Vcb, PEXT2_MCB Dcb, PUNICODE_STRING File
         Oem.Buffer = Ext2AllocatePool(PagedPool, Oem.MaximumLength, 'EB2E');
         if (!Oem.Buffer) {
             DEBUG(DL_ERR, ( "Ex2BuildEntry: failed to allocate OEM name.\n"));
-            __leave;
+            _SEH2_LEAVE;
         }
         de->d_name.name = Oem.Buffer;
         RtlZeroMemory(Oem.Buffer, Oem.MaximumLength);
         Status = Ext2UnicodeToOEM(Vcb, &Oem, FileName);
         if (!NT_SUCCESS(Status)) {
             DEBUG(DL_CP, ("Ext2BuildEntry: failed to convert %S to OEM.\n", FileName->Buffer));
-            __leave;
+            _SEH2_LEAVE;
         }
         de->d_name.len  = Oem.Length;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!NT_SUCCESS(Status)) {
             if (de)
                 Ext2FreeEntry(de);
         }
-    }
+    } _SEH2_END;
 
     return de;
 }
@@ -633,11 +633,11 @@ Ext2CheckExtent(
 VOID
 Ext2ClearAllExtents(PLARGE_MCB  Zone)
 {
-    __try {
+    _SEH2_TRY {
         FsRtlTruncateLargeMcb(Zone, (LONGLONG)0);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         DbgBreak();
-    }
+    } _SEH2_END;
 }
 
 BOOLEAN
@@ -664,17 +664,17 @@ Ext2AddVcbExtent (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
         rc = FsRtlAddLargeMcbEntry(
                 &Vcb->Extents,
                 Offset,
                 Offset,
                 Length
                 );
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -714,16 +714,16 @@ Ext2RemoveVcbExtent (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
         FsRtlRemoveLargeMcbEntry(
             &Vcb->Extents,
             Offset,
             Length
         );
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -808,7 +808,7 @@ Ext2AddMcbExtent (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
 
         rc = FsRtlAddLargeMcbEntry(
             &Mcb->Extents,
@@ -817,11 +817,11 @@ Again:
             Length
         );
 
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
 
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -863,16 +863,16 @@ Ext2RemoveMcbExtent (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
         FsRtlRemoveLargeMcbEntry(
             &Mcb->Extents,
             Vbn,
             Length
         );
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -945,7 +945,7 @@ Ext2AddMcbMetaExts (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
 
         rc = FsRtlAddLargeMcbEntry(
                 &Mcb->MetaExts,
@@ -954,11 +954,11 @@ Again:
                 Length
              );
 
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
 
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -989,7 +989,7 @@ Ext2RemoveMcbMetaExts (
 
 Again:
 
-    __try {
+    _SEH2_TRY {
 
         FsRtlRemoveLargeMcbEntry(
             &Mcb->MetaExts,
@@ -997,10 +997,10 @@ Again:
             Length
         );
 
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         DbgBreak();
         rc = FALSE;
-    }
+    } _SEH2_END;
 
     if (!rc && ++TriedTimes < 10) {
         Ext2Sleep(TriedTimes * 100);
@@ -1485,13 +1485,13 @@ Ext2AllocateMcb (
     }
 
     /* initialize Mcb Extents, it will raise an expcetion if failed */
-    __try {
+    _SEH2_TRY {
         FsRtlInitializeLargeMcb(&(Mcb->Extents), NonPagedPool);
         FsRtlInitializeLargeMcb(&(Mcb->MetaExts), NonPagedPool);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
         Status = STATUS_INSUFFICIENT_RESOURCES;
         DbgBreak();
-    }
+    } _SEH2_END;
 
     if (!NT_SUCCESS(Status)) {
         goto errorout;
@@ -1593,15 +1593,15 @@ Ext2SearchMcb(
     BOOLEAN   LockAcquired = FALSE;
     PEXT2_MCB Mcb = NULL;
 
-    __try {
+    _SEH2_TRY {
         ExAcquireResourceSharedLite(&Vcb->McbLock, TRUE);
         LockAcquired = TRUE;
         Mcb = Ext2SearchMcbWithoutLock(Parent, FileName);
-    } __finally {
+    } _SEH2_FINALLY {
         if (LockAcquired) {
             ExReleaseResourceLite(&Vcb->McbLock);
         }
-    }
+    } _SEH2_END;
 
     return Mcb;
 }
@@ -1616,14 +1616,14 @@ Ext2SearchMcbWithoutLock(
 
     DEBUG(DL_RES, ("Ext2SearchMcb: %wZ\n", FileName));
 
-    __try {
+    _SEH2_TRY {
 
         Ext2ReferMcb(Parent);
 
         if (Ext2IsDot(FileName)) {
             TmpMcb = Parent;
             Ext2ReferMcb(Parent);
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Ext2IsDotDot(FileName)) {
@@ -1635,7 +1635,7 @@ Ext2SearchMcbWithoutLock(
             if (TmpMcb) {
                 Ext2ReferMcb(TmpMcb);
             }
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (IsMcbSymLink(Parent)) {
@@ -1644,7 +1644,7 @@ Ext2SearchMcbWithoutLock(
                 ASSERT(!IsMcbSymLink(Parent->Target));
             } else {
                 TmpMcb = NULL;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else {
             TmpMcb = Parent->Child;
@@ -1662,10 +1662,10 @@ Ext2SearchMcbWithoutLock(
             TmpMcb = TmpMcb->Next;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         Ext2DerefMcb(Parent);
-    }
+    } _SEH2_END;
 
     return TmpMcb;
 }
@@ -1680,7 +1680,7 @@ Ext2InsertMcb (
     BOOLEAN     LockAcquired = FALSE;
     PEXT2_MCB   Mcb = NULL;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(
             &Vcb->McbLock,
@@ -1722,12 +1722,12 @@ Ext2InsertMcb (
             SetLongFlag(Child->Flags, MCB_ENTRY_TREE);
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (LockAcquired) {
             ExReleaseResourceLite(&Vcb->McbLock);
         }
-    }
+    } _SEH2_END;
 }
 
 BOOLEAN
@@ -1740,7 +1740,7 @@ Ext2RemoveMcb (
     BOOLEAN     LockAcquired = FALSE;
     BOOLEAN     bLinked = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(&Vcb->McbLock, TRUE);
         LockAcquired = TRUE;
@@ -1784,12 +1784,12 @@ Ext2RemoveMcb (
             Mcb->de->d_parent = NULL;
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (LockAcquired) {
             ExReleaseResourceLite(&Vcb->McbLock);
         }
-    }
+    } _SEH2_END;
 
     return TRUE;
 }
@@ -1800,7 +1800,7 @@ Ext2CleanupAllMcbs(PEXT2_VCB Vcb)
     BOOLEAN   LockAcquired = FALSE;
     PEXT2_MCB Mcb = NULL;
 
-    __try {
+    _SEH2_TRY {
 
         ExAcquireResourceExclusiveLite(
             &Vcb->McbLock,
@@ -1824,12 +1824,12 @@ Ext2CleanupAllMcbs(PEXT2_VCB Vcb)
         Ext2FreeMcb(Vcb, Vcb->McbTree);
         Vcb->McbTree = NULL;
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (LockAcquired) {
             ExReleaseResourceLite(&Vcb->McbLock);
         }
-    }
+    } _SEH2_END;
 }
 
 BOOLEAN
@@ -2300,17 +2300,17 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
     BOOLEAN                     InodeLookasideInitialized = FALSE;
     BOOLEAN                     GroupLoaded = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         if (Vpb == NULL) {
             Status = STATUS_DEVICE_NOT_READY;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* Reject mounting volume if we encounter unsupported incompat features */
         if (FlagOn(sb->s_feature_incompat, ~EXT4_FEATURE_INCOMPAT_SUPP)) {
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* Mount the volume RO if we encounter unsupported ro_compat features */
@@ -2328,7 +2328,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         /* we cannot handle volume with block size bigger than 64k */
         if (Vcb->BlockSize > EXT2_MAX_USER_BLKSIZE) {
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         if (Vcb->BlockSize >= PAGE_SIZE) {
@@ -2471,7 +2471,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
                      &IoctlSize );
 
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
         Vcb->ChangeCount = ChangeCount;
 
@@ -2479,7 +2479,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         Vcb->Volume = IoCreateStreamFileObject(NULL, Vcb->Vpb->RealDevice);
         if (!Vcb->Volume) {
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* initialize streaming object file */
@@ -2504,14 +2504,14 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
 
         /* initialize disk block LargetMcb and entry Mcb,
            it will raise an expcetion if failed */
-        __try {
+        _SEH2_TRY {
             FsRtlInitializeLargeMcb(&(Vcb->Extents), PagedPool);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
+        } _SEH2_EXCEPT (EXCEPTION_EXECUTE_HANDLER) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
             DbgBreak();
-        }
+        } _SEH2_END;
         if (!NT_SUCCESS(Status)) {
-            __leave;
+            _SEH2_LEAVE;
         }
         ExtentsInitialized = TRUE;
 
@@ -2530,7 +2530,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
                                                 Vcb->BlockSize, 0, 0, NULL);
         if (!Vcb->bd.bd_bh_cache) {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb->SectorBits = Ext2Log2(SECTOR_SIZE);
@@ -2560,7 +2560,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
                     !is_power_of_2(Vcb->sbi.s_desc_size)) {
                 DEBUG(DL_ERR, ("EXT4-fs: unsupported descriptor size %lu\n", Vcb->sbi.s_desc_size));
                 Status = STATUS_DISK_CORRUPT_ERROR;
-                __leave;
+                _SEH2_LEAVE;
             }
         } else {
             Vcb->sbi.s_desc_size = EXT4_MIN_DESC_SIZE;
@@ -2570,12 +2570,12 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         Vcb->sbi.s_inodes_per_group = sb->s_inodes_per_group;
         if (EXT3_INODES_PER_GROUP(&Vcb->sb) == 0) {
             Status = STATUS_DISK_CORRUPT_ERROR;
-            __leave;
+            _SEH2_LEAVE;
         }
         Vcb->sbi.s_inodes_per_block = BLOCK_SIZE / Vcb->InodeSize;
         if (Vcb->sbi.s_inodes_per_block == 0) {
             Status = STATUS_DISK_CORRUPT_ERROR;
-            __leave;
+            _SEH2_LEAVE;
         }
         Vcb->sbi.s_itb_per_group = Vcb->sbi.s_inodes_per_group /
                                    Vcb->sbi.s_inodes_per_block;
@@ -2612,7 +2612,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
                    "unsupported optional features (%x).\n",
                    Vcb->sb.s_id, le32_to_cpu(features));
             Status = STATUS_UNRECOGNIZED_VOLUME;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         features = EXT3_HAS_RO_COMPAT_FEATURE(&Vcb->sb, ~EXT4_FEATURE_RO_COMPAT_SUPP);
@@ -2659,7 +2659,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         /* load all gorup desc */
         if (!Ext2LoadGroup(Vcb)) {
             Status = STATUS_UNSUCCESSFUL;
-            __leave;
+            _SEH2_LEAVE;
         }
         GroupLoaded = TRUE;
 
@@ -2683,14 +2683,14 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         if (!Vcb->McbTree) {
             DbgBreak();
             Status = STATUS_UNSUCCESSFUL;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         Vcb->sb.s_root = Ext2BuildEntry(Vcb, NULL, &RootNode);
         if (!Vcb->sb.s_root) {
             DbgBreak();
             Status = STATUS_UNSUCCESSFUL;
-            __leave;
+            _SEH2_LEAVE;
         }
         Vcb->sb.s_root->d_sb = &Vcb->sb;
         Vcb->sb.s_root->d_inode = &Vcb->McbTree->Inode;
@@ -2702,7 +2702,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
         if (!Ext2LoadInode(Vcb, &Vcb->McbTree->Inode)) {
             DbgBreak();
             Status = STATUS_CANT_WAIT;
-            __leave;
+            _SEH2_LEAVE;
         }
 
         /* initializeroot node */
@@ -2727,7 +2727,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
 
         SetLongFlag(Vcb->Flags, VCB_INITIALIZED);
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (!NT_SUCCESS(Status)) {
 
@@ -2769,7 +2769,7 @@ Ext2InitializeVcb( IN PEXT2_IRP_CONTEXT IrpContext,
                 ExDeleteResourceLite(&Vcb->PagingIoResource);
             }
         }
-    }
+    } _SEH2_END;
 
     return Status;
 }
@@ -3048,7 +3048,7 @@ Ext2McbReaperThread(
     BOOLEAN         LastState  = TRUE;
     BOOLEAN         WaitLock;
 
-    __try {
+    _SEH2_TRY {
 
         Reaper->Thread = PsGetCurrentThread();
 
@@ -3144,14 +3144,14 @@ Ext2McbReaperThread(
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
         }
 
         KeSetEvent(&Reaper->Engine, 0, FALSE);
-    }
+    } _SEH2_END;
 
     PsTerminateSystemThread(STATUS_SUCCESS);
 }
@@ -3224,7 +3224,7 @@ Ext2bhReaperThread(
     BOOLEAN         DidNothing = FALSE;
     BOOLEAN         NonWait = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         Reaper->Thread = PsGetCurrentThread();
 
@@ -3285,14 +3285,14 @@ Ext2bhReaperThread(
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
         }
 
         KeSetEvent(&Reaper->Engine, 0, FALSE);
-    }
+    } _SEH2_END;
 
     PsTerminateSystemThread(STATUS_SUCCESS);
 }
@@ -3376,7 +3376,7 @@ Ext2FcbReaperThread(
     BOOLEAN         DidNothing = FALSE;
     BOOLEAN         NonWait = FALSE;
 
-    __try {
+    _SEH2_TRY {
 
         Reaper->Thread = PsGetCurrentThread();
 
@@ -3437,14 +3437,14 @@ Ext2FcbReaperThread(
             }
         }
 
-    } __finally {
+    } _SEH2_FINALLY {
 
         if (GlobalAcquired) {
             ExReleaseResourceLite(&Ext2Global->Resource);
         }
 
         KeSetEvent(&Reaper->Engine, 0, FALSE);
-    }
+    } _SEH2_END;
 
     PsTerminateSystemThread(STATUS_SUCCESS);
 }
