@@ -32,11 +32,11 @@ typedef IO_STACK_LOCATION EXTENDED_IO_STACK_LOCATION, *PEXTENDED_IO_STACK_LOCATI
 #endif
 
 #if EXT2_DEBUG
-#if _X86_
-#define DbgBreak()      __asm int 3
-#else
+//#if _X86_
+//#define DbgBreak()      __asm int 3
+//#else
 #define DbgBreak()      KdBreakPoint()
-#endif
+//#endif
 #else
 #define DbgBreak()
 #endif
