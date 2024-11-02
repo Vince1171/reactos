@@ -1967,7 +1967,7 @@ static inline __u32 ext4_chksum(struct ext4_sb_info *sbi, __u32 crc,
 	return *(__u32 *)desc.ctx;
 }
 #endif
-#ifdef __KERNEL__
+#if defined(__KERNEL__) && !defined(__REACTOS__)
 
 /* hash info structure used by the directory hash */
 struct dx_hash_info
