@@ -600,7 +600,7 @@ Ext2OplockRequest (
             ExReleaseResourceLite(&Vcb->MainResource);
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             Ext2CompleteIrpContext(IrpContext, Status);
         }
     } _SEH2_END;
@@ -887,7 +887,7 @@ Ext2QueryRetrievalPointers (
             ExReleaseResourceLite(&Fcb->MainResource);
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {
@@ -1136,7 +1136,7 @@ exit_to_get_rps:
             Ext2DestroyExtentChain(Chain);
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {
@@ -1269,7 +1269,7 @@ Ext2GetRetrievalPointerBase (
             ExReleaseResourceLite(&Fcb->MainResource);
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {
@@ -1492,7 +1492,7 @@ Ext2GetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
             Ext2FreePool(OemNameBuffer, 'NL2E');
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {
@@ -1720,7 +1720,7 @@ Ext2SetReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
                 FILE_ACTION_MODIFIED );
         }
 
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {
@@ -1867,7 +1867,7 @@ Ext2DeleteReparsePoint (IN PEXT2_IRP_CONTEXT IrpContext)
 
         }
         
-        if (!AbnormalTermination()) {
+        if (!_SEH2_AbnormalTermination()) {
             if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
                 Status = Ext2QueueRequest(IrpContext);
             } else {

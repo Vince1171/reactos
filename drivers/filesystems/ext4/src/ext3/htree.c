@@ -1842,8 +1842,8 @@ int make_indexed_dir(struct ext2_icb *icb, struct dentry *dentry,
     de = (struct ext3_dir_entry_2 *)((char *)fde +
                                      ext3_rec_len_from_disk(fde->rec_len));
     if ((char *) de >= (((char *) root) + blocksize)) {
-        DEBUG(DL_ERR, (__FUNCTION__  ": invalid rec_len for '..' in inode %lu",
-                       dir->i_ino));
+        // DEBUG(DL_ERR, (__FUNCTION__  ": invalid rec_len for '..' in inode %lu",
+        //                dir->i_ino));
         brelse(bh);
         return -EIO;
     }

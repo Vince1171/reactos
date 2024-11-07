@@ -76,16 +76,12 @@ list(APPEND SOURCE
     src/except.c
     src/rbtree.c
     src/devctl.c
-    src/Ext4Fsd.rc
     src/cleanup.c
     src/debug.c
-    src/ext4.rc
-    src/jbd2/SOURCES
     src/jbd2/recovery.c
     src/jbd2/revoke.c
     src/jbd2/readme.txt
     src/jbd2/journal.c
-    src/jbd2/MAKEFILE
     src/jbd2/transaction.c
     src/close.c
     src/init.c

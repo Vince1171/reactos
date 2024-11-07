@@ -1609,6 +1609,7 @@ static inline void ext4_clear_state_flags(struct ext4_inode_info *ei)
 #define EXT4_FEATURE_INCOMPAT_ENCRYPT		0x10000
 #define EXT4_FEATURE_INCOMPAT_CASEFOLD		0x20000
 
+
 #define EXT4_FEATURE_COMPAT_FUNCS(name, flagname) \
 static inline bool ext4_has_feature_##name(struct super_block *sb) \
 { \
@@ -1967,7 +1968,7 @@ static inline __u32 ext4_chksum(struct ext4_sb_info *sbi, __u32 crc,
 	return *(__u32 *)desc.ctx;
 }
 #endif
-#if defined(__KERNEL__) && !defined(__REACTOS__)
+#if defined(__KERNEL__) //&& !defined(__REACTOS__)
 
 /* hash info structure used by the directory hash */
 struct dx_hash_info
@@ -2219,7 +2220,7 @@ extern struct buffer_head *ext4_read_block_bitmap(struct super_block *sb,
 extern unsigned ext4_free_clusters_after_init(struct super_block *sb,
 					      ext4_group_t block_group,
 					      struct ext4_group_desc *gdp);
-ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
+static inline ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
 #if 0
 static inline bool ext4_encrypted_inode(struct inode *inode)
 {
@@ -2370,7 +2371,7 @@ extern int ext4_mb_add_groupinfo(struct super_block *sb,
 		ext4_group_t i, struct ext4_group_desc *desc);
 extern int ext4_group_add_blocks(handle_t *handle, struct super_block *sb,
 				ext4_fsblk_t block, unsigned long count);
-extern int ext4_trim_fs(struct super_block *, struct fstrim_range *);
+//extern int ext4_trim_fs(struct super_block *, struct fstrim_range *);
 extern void ext4_process_freed_data(struct super_block *sb, tid_t commit_tid);
 
 /* inode.c */
@@ -2413,18 +2414,17 @@ extern struct inode *__ext4_iget(struct super_block *sb, unsigned long ino,
 	__ext4_iget((sb), (ino), (flags), __func__, __LINE__)
 
 extern int  ext4_write_inode(struct inode *, struct writeback_control *);
-extern int  ext4_setattr(struct dentry *, struct iattr *);
-extern int  ext4_getattr(const struct path *, struct kstat *, __u32, unsigned int);
+// extern int  ext4_setattr(struct dentry *, struct iattr *);
+// extern int  ext4_getattr(const struct path *, struct kstat *, __u32, unsigned int);
 extern void ext4_evict_inode(struct inode *);
 extern void ext4_clear_inode(struct inode *);
-extern int  ext4_file_getattr(const struct path *, struct kstat *, __u32, unsigned int);
+// extern int  ext4_file_getattr(const struct path *, struct kstat *, __u32, unsigned int);
 extern int  ext4_sync_inode(handle_t *, struct inode *);
 extern void ext4_dirty_inode(struct inode *, int);
 extern int ext4_change_inode_journal_flag(struct inode *, int);
 extern int ext4_get_inode_loc(struct inode *, struct ext4_iloc *);
 extern int ext4_inode_attach_jinode(struct inode *inode);
 extern int ext4_can_truncate(struct inode *inode);
-extern int ext4_truncate(struct inode *);
 extern int ext4_break_layouts(struct inode *);
 extern int ext4_punch_hole(struct inode *inode, loff_t offset, loff_t length);
 extern int ext4_truncate_restart_trans(handle_t *, struct inode *, int nblocks);
@@ -2435,8 +2435,8 @@ extern int ext4_writepage_trans_blocks(struct inode *);
 extern int ext4_chunk_trans_blocks(struct inode *, int nrblocks);
 extern int ext4_zero_partial_blocks(handle_t *handle, struct inode *inode,
 			     loff_t lstart, loff_t lend);
-extern vm_fault_t ext4_page_mkwrite(struct vm_fault *vmf);
-extern vm_fault_t ext4_filemap_fault(struct vm_fault *vmf);
+// extern vm_fault_t ext4_page_mkwrite(struct vm_fault *vmf);
+// extern vm_fault_t ext4_filemap_fault(struct vm_fault *vmf);
 extern qsize_t *ext4_get_reserved_space(struct inode *inode);
 extern int ext4_get_projid(struct inode *inode, kprojid_t *projid);
 extern void ext4_da_release_space(struct inode *inode, int to_free);
@@ -2496,7 +2496,7 @@ extern int ext4_resize_fs(struct super_block *sb, ext4_fsblk_t n_blocks_count);
 /* super.c */
 extern struct buffer_head *ext4_sb_bread(struct super_block *sb,
 					 sector_t block, int op_flags);
-extern int ext4_seq_options_show(struct seq_file *seq, void *offset);
+// extern int ext4_seq_options_show(struct seq_file *seq, void *offset);
 extern int ext4_calculate_overhead(struct super_block *sb);
 extern void ext4_superblock_csum_set(struct super_block *sb);
 extern void *ext4_kvmalloc(size_t size, gfp_t flags);
@@ -2933,11 +2933,11 @@ extern int ext4_init_inline_data(handle_t *handle, struct inode *inode,
 extern int ext4_destroy_inline_data(handle_t *handle, struct inode *inode);
 
 extern int ext4_readpage_inline(struct inode *inode, struct page *page);
-extern int ext4_try_to_write_inline_data(struct address_space *mapping,
-					 struct inode *inode,
-					 loff_t pos, unsigned len,
-					 unsigned flags,
-					 struct page **pagep);
+// extern int ext4_try_to_write_inline_data(struct address_space *mapping,
+// 					 struct inode *inode,
+// 					 loff_t pos, unsigned len,
+// 					 unsigned flags,
+// 					 struct page **pagep);
 extern int ext4_write_inline_data_end(struct inode *inode,
 				      loff_t pos, unsigned len,
 				      unsigned copied,
@@ -2946,12 +2946,12 @@ extern struct buffer_head *
 ext4_journalled_write_inline_data(struct inode *inode,
 				  unsigned len,
 				  struct page *page);
-extern int ext4_da_write_inline_data_begin(struct address_space *mapping,
-					   struct inode *inode,
-					   loff_t pos, unsigned len,
-					   unsigned flags,
-					   struct page **pagep,
-					   void **fsdata);
+// extern int ext4_da_write_inline_data_begin(struct address_space *mapping,
+// 					   struct inode *inode,
+// 					   loff_t pos, unsigned len,
+// 					   unsigned flags,
+// 					   struct page **pagep,
+// 					   void **fsdata);
 extern int ext4_da_write_inline_data_end(struct inode *inode, loff_t pos,
 					 unsigned len, unsigned copied,
 					 struct page *page);
@@ -2961,9 +2961,9 @@ extern int ext4_try_add_inline_entry(handle_t *handle,
 extern int ext4_try_create_inline_dir(handle_t *handle,
 				      struct inode *parent,
 				      struct inode *inode);
-extern int ext4_read_inline_dir(struct file *filp,
-				struct dir_context *ctx,
-				int *has_inline_data);
+// extern int ext4_read_inline_dir(struct file *filp,
+// 				struct dir_context *ctx,
+// 				int *has_inline_data);
 extern int htree_inlinedir_to_tree(struct file *dir_file,
 				   struct inode *dir, ext4_lblk_t block,
 				   struct dx_hash_info *hinfo,
@@ -2982,9 +2982,9 @@ extern bool empty_inline_dir(struct inode *dir, int *has_inline_data);
 extern struct buffer_head *ext4_get_first_inline_block(struct inode *inode,
 					struct ext4_dir_entry_2 **parent_de,
 					int *retval);
-extern int ext4_inline_data_fiemap(struct inode *inode,
-				   struct fiemap_extent_info *fieinfo,
-				   int *has_inline, __u64 start, __u64 len);
+// extern int ext4_inline_data_fiemap(struct inode *inode,
+// 				   struct fiemap_extent_info *fieinfo,
+// 				   int *has_inline, __u64 start, __u64 len);
 
 struct iomap;
 extern int ext4_inline_data_iomap(struct inode *inode, struct iomap *iomap);
@@ -3032,9 +3032,9 @@ static inline void ext4_set_de_type(struct super_block *sb,
 }
 #endif
 /* readpages.c */
-extern int ext4_mpage_readpages(struct address_space *mapping,
-				struct list_head *pages, struct page *page,
-				unsigned nr_pages, bool is_readahead);
+// extern int ext4_mpage_readpages(struct address_space *mapping,
+// 				struct list_head *pages, struct page *page,
+// 				unsigned nr_pages, bool is_readahead);
 
 /* symlink.c */
 extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
@@ -3101,8 +3101,8 @@ extern struct ext4_ext_path *ext4_find_extent(struct inode *, ext4_lblk_t,
 extern void ext4_ext_drop_refs(struct ext4_ext_path *);
 extern int ext4_ext_check_inode(struct inode *inode);
 extern ext4_lblk_t ext4_ext_next_allocated_block(struct ext4_ext_path *path);
-extern int ext4_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
-			__u64 start, __u64 len);
+// extern int ext4_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
+// 			__u64 start, __u64 len);
 extern int ext4_ext_precache(struct inode *inode);
 extern int ext4_collapse_range(struct inode *inode, loff_t offset, loff_t len);
 extern int ext4_insert_range(struct inode *inode, loff_t offset, loff_t len);
@@ -3130,7 +3130,7 @@ extern int ext4_put_io_end(ext4_io_end_t *io_end);
 extern void ext4_put_io_end_defer(ext4_io_end_t *io_end);
 extern void ext4_io_submit_init(struct ext4_io_submit *io,
 				struct writeback_control *wbc);
-extern void ext4_end_io_rsv_work(struct work_struct *work);
+// extern void ext4_end_io_rsv_work(struct work_struct *work);
 extern void ext4_io_submit(struct ext4_io_submit *io);
 extern int ext4_bio_write_page(struct ext4_io_submit *io,
 			       struct page *page,
@@ -3370,7 +3370,7 @@ __u32 ext4_chksum(struct ext4_sb_info *sbi, __u32 crc,
 int ext4_superblock_csum_verify(struct super_block *sb,
 				       struct ext4_super_block *es);
 void ext4_superblock_csum_set(struct super_block *sb);
-__le16 ext4_group_desc_csum(struct super_block *sb, __u32 block_group,
+static __le16 ext4_group_desc_csum(struct super_block *sb, __u32 block_group,
 				   struct ext4_group_desc *gdp);
 int ext4_group_desc_csum_verify(struct super_block *sb, __u32 block_group,
 				struct ext4_group_desc *gdp);

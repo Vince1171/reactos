@@ -221,7 +221,11 @@ Ext2QueueCloseRequest (IN PEXT2_IRP_CONTEXT IrpContext)
     ExQueueWorkItem(&IrpContext->WorkQueueItem, DelayedWorkQueue);
 }
 
+#ifdef __REACTOS__
+VOID NTAPI
+#else
 VOID
+#endif
 Ext2DeQueueCloseRequest (IN PVOID Context)
 {
     PEXT2_IRP_CONTEXT IrpContext;

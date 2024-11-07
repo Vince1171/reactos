@@ -372,7 +372,7 @@ Ext2QueryEa (
 			Irp->IoStatus.Information = UserBufferLength - RemainingUserBufferLength;
 		}
 
-		if (!AbnormalTermination()) {
+		if (!_SEH2_AbnormalTermination()) {
 			if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
 				Status = Ext2QueueRequest(IrpContext);
 			}
@@ -591,7 +591,7 @@ Ext2SetEa (
 				FILE_ACTION_MODIFIED);
 		}
 
-		if (!AbnormalTermination()) {
+		if (!_SEH2_AbnormalTermination()) {
 			if (Status == STATUS_PENDING || Status == STATUS_CANT_WAIT) {
 				Status = Ext2QueueRequest(IrpContext);
 			}
