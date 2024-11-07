@@ -2,7 +2,7 @@
  * COPYRIGHT:        See COPYRIGHT.TXT
  * PROJECT:          Ext2-Ext4 File System Driver for WinXP-Win10
  * FILE:             ext4_csum.c
- * PROGRAMMER:       Bo Brantén <bosse@acc.umu.se>
+ * PROGRAMMER:       Bo Brantï¿½n <bosse@acc.umu.se>
  * HOMEPAGE:         http://www.ext2fsd.com
  * UPDATE HISTORY:
  */
@@ -10,8 +10,8 @@
 /* INCLUDES *****************************************************************/
 
 #include "ext2fs.h"
-#include "linux\ext4.h"
-#include "linux\ext4_xattr.h"
+#include "linux/ext4.h"
+#include "linux/ext4_xattr.h"
 
 /* GLOBALS ***************************************************************/
 
