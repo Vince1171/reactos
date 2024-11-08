@@ -115,7 +115,7 @@ target_link_libraries(ext4fs memcmp ${PSEH_LIB})
 add_definitions(-D__KERNEL__ -D_CRT_NO_POSIX_ERROR_CODES -D_CRT_DECLARE_NONSTDC_NAMES=1)
 set_module_type(ext4fs kernelmodedriver)
 add_importlibs(ext4fs ntoskrnl hal)
-add_pch(ext4fs inc/ext4fs.h SOURCE)
+add_pch(ext4fs inc/ext2fs.h SOURCE)
 
 add_cd_file(TARGET ext4fs DESTINATION reactos/system32/drivers FOR all)
 add_registry_inf(ext4fs_reg.inf)
