@@ -2689,6 +2689,12 @@ Ext2AllocatePool(
     IN ULONG Tag
 )
 {
+#ifdef __REACTOS__
+    return ExAllocatePoolWithTag(
+               PoolType,
+               NumberOfBytes,
+               Tag);
+#else
     POOL_FLAGS PoolFlags;
 
     if (PoolType == PagedPool)
@@ -2702,6 +2708,7 @@ Ext2AllocatePool(
                PoolFlags,
                NumberOfBytes,
                Tag);
+#endif
 }
 
 VOID
