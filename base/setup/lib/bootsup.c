@@ -1298,9 +1298,9 @@ InstallBtrfsBootcodeToPartition(
 static
 NTSTATUS
 InstallExt2BootcodeToPartition(
-    IN PUNICODE_STRING SystemRootPath,
-    IN PUNICODE_STRING SourceRootPath,
-    IN PUNICODE_STRING DestinationArcPath)
+    _In_ PCUNICODE_STRING SystemRootPath,
+    _In_ PCUNICODE_STRING SourceRootPath,
+    _In_ PCUNICODE_STRING DestinationArcPath)
 {
     NTSTATUS Status;
     BOOLEAN DoesFreeLdrExist;
@@ -1310,15 +1310,11 @@ InstallExt2BootcodeToPartition(
     /* EXT2 partition */
     DPRINT("System path: '%wZ'\n", SystemRootPath);
 
-    /* Copy FreeLoader to the system partition, always overwriting the older version */
-    CombinePaths(SrcPath, ARRAYSIZE(SrcPath), 2, SourceRootPath->Buffer, L"\\loader\\freeldr.sys");
-    CombinePaths(DstPath, ARRAYSIZE(DstPath), 2, SystemRootPath->Buffer, L"freeldr.sys");
-
-    DPRINT("Copy: %S ==> %S\n", SrcPath, DstPath);
-    Status = SetupCopyFile(SrcPath, DstPath, FALSE);
+        /* Install the bootloader */
+    Status = InstallBootloaderFiles(SystemRootPath, SourceRootPath);
     if (!NT_SUCCESS(Status))
     {
-        DPRINT1("SetupCopyFile() failed (Status %lx)\n", Status);
+        DPRINT1("InstallBootloaderFiles() failed (Status %lx)\n", Status);
         return Status;
     }
 
@@ -1523,14 +1519,14 @@ InstallVBRToPartition(
                                                SourceRootPath,
                                                DestinationArcPath);
     }
-    else if (wcsicmp(FileSystemName, L"EXT2")  == 0)
+    else if (_wcsicmp(FileSystemName, L"EXT2")  == 0)
     {
         return InstallExt2BootcodeToPartition(SystemRootPath,
                                               SourceRootPath,
                                               DestinationArcPath);
     }
-    else if (wcsicmp(FileSystemName, L"EXT3")  == 0 ||
-             wcsicmp(FileSystemName, L"EXT4")  == 0)
+    else if (_wcsicmp(FileSystemName, L"EXT3")  == 0 ||
+             _wcsicmp(FileSystemName, L"EXT4")  == 0)
     {
         return STATUS_NOT_SUPPORTED;
     }
