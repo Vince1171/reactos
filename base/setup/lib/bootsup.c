@@ -1372,7 +1372,7 @@ InstallExt2BootcodeToPartition(
             CombinePaths(DstPath, _countof(DstPath), 2, SystemRootPath->Buffer, BootSector);
 
             DPRINT1("Save bootsector: %S ==> %S\n", SystemRootPath->Buffer, DstPath);
-            Status = SaveBootSector(SystemRootPath->Buffer, DstPath, BTRFS_BOOTSECTOR_SIZE);
+            Status = SaveBootSector(SystemRootPath->Buffer, DstPath, EXT2_BOOTSECTOR_SIZE);
             if (!NT_SUCCESS(Status))
             {
                 DPRINT1("SaveBootSector() failed (Status %lx)\n", Status);
