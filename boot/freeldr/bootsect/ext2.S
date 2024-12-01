@@ -421,8 +421,8 @@ SearchRootDirectory:
 		mov  di,dx
 		push di							// Save the start of the directory entry
 		add  di, 8						// Add the offset to the filename
-		mov  si,offset msgFreeLdr		// Filename is contained in the message
-		mov  cx,11						// In first 11 bytes
+		mov  si,offset filename    		// Filename
+		mov  cl,11						// In first 11 bytes
 		repe cmpsb						// Compare the file names
 		pop  di
 		pop  eax
@@ -694,6 +694,8 @@ msgFreeLdr:
     .ascii "freeldr.sys not found", NUL
 msgFileSize:
     .ascii "File size 0", NUL
+filename:
+	.ascii "freeldr.sys"
 msgRegFile:
     .ascii "freeldr.sys isn't a regular file", NUL
 msgLoading:
