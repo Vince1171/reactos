@@ -4,7 +4,7 @@
  * FILE:            dll/win32/userenv/profile.c
  * PURPOSE:         User profile code
  * PROGRAMMERS:     Eric Kohl
- *                  Hervé Poussineau
+ *                  Hervï¿½ Poussineau
  */
 
 #include "precomp.h"
@@ -676,6 +676,9 @@ CopySystemProfile(
         DPRINT1("Failed to create the default profile path (Error %lu)\n", GetLastError());
         goto done;
     }
+
+    DPRINT1("szProfilePath %ws\n", szProfilePath);
+    DPRINT1("szDefaultProfilePath %ws\n", szDefaultProfilePath);
 
     /* Copy the default profile into the new profile directory */
     // FIXME: Security!

@@ -90,11 +90,13 @@ CopyDirectory(LPCWSTR lpDestinationPath,
     LPWSTR lpDstPtr;
     HANDLE hFind;
 
-    DPRINT("CopyDirectory (%S, %S) called\n",
+    DPRINT1("CopyDirectory (%S, %S) called\n",
             lpDestinationPath, lpSourcePath);
 
     wcscpy(szFileName, lpSourcePath);
     wcscat(szFileName, L"\\*.*");
+
+    DPRINT1("szFileName: %ws\n", szFileName);
 
     hFind = FindFirstFileW(szFileName,
                            &FindFileData);
