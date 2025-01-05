@@ -2519,7 +2519,10 @@ grab_segment:
         else
         {
             Segment->RawLength.QuadPart = MaximumSize.QuadPart;
-            Segment->Length.QuadPart = PAGE_ROUND_UP(Segment->RawLength.QuadPart);
+            Segment->Length.QuadPart = Segment->RawLength.QuadPart;
+            Segment->Length.QuadPart >>= PAGE_SHIFT;
+            Segment->Length.QuadPart += (1 << PAGE_SHIFT) - 1;
+            Segment->Length.QuadPart &= ~( (1 << PAGE_SHIFT) - 1 );
         }
         Segment->Image.VirtualAddress = 0;
         MiInitializeSectionPageTable(Segment);
@@ -2543,7 +2546,10 @@ grab_segment:
                 !(AllocationAttributes & SEC_RESERVE))
         {
             Segment->RawLength.QuadPart = MaximumSize.QuadPart;
-            Segment->Length.QuadPart = PAGE_ROUND_UP(Segment->RawLength.QuadPart);
+            Segment->Length.QuadPart = Segment->RawLength.QuadPart;
+            Segment->Length.QuadPart >>= PAGE_SHIFT;
+            Segment->Length.QuadPart += (1 << PAGE_SHIFT) - 1;
+            Segment->Length.QuadPart &= ~( (1 << PAGE_SHIFT) - 1 );
         }
 
         MmUnlockSectionSegment(Segment);
@@ -2930,7 +2936,10 @@ MmspPageAlignSegments
                  * already is
                  */
                 ASSERT((EffectiveSegment->Image.VirtualAddress % PAGE_SIZE) == 0);
-                EffectiveSegment->Length.QuadPart = PAGE_ROUND_UP(EffectiveSegment->Length.QuadPart);
+                EffectiveSegment->Length.QuadPart = EffectiveSegment->Length.QuadPart;
+                EffectiveSegment->Length.QuadPart >>= PAGE_SHIFT;
+                Segment->Length.QuadPart += (1 << PAGE_SHIFT) - 1;
+                Segment->Length.QuadPart &= ~( (1 << PAGE_SHIFT) - 1 );
             }
             /*
              * The current segment is still part of the current effective segment:

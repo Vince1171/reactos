@@ -439,8 +439,15 @@ CcZeroData(IN PFILE_OBJECT FileObject,
         DPRINT1("RtlZeroMemory(%x,%x)\n", ZeroBuf, PAGE_SIZE);
         RtlZeroMemory(ZeroBuf, PAGE_SIZE);
 
-        Target.QuadPart = PAGE_ROUND_DOWN(LowerBound.QuadPart);
-        End.QuadPart = PAGE_ROUND_UP(UpperBound.QuadPart);
+        Target.QuadPart = LowerBound.QuadPart;
+        Target.QuadPart >>= PAGE_SHIFT;
+        Target.QuadPart <<= PAGE_SHIFT;
+
+        End.QuadPart = UpperBound.QuadPart;
+
+        End.QuadPart >>= PAGE_SHIFT;
+        End.QuadPart += (1 << PAGE_SHIFT) - 1;
+        End.QuadPart &= ~( (1 << PAGE_SHIFT) - 1 );
 
         // Handle leading page
         if (LowerBound.QuadPart != Target.QuadPart)
